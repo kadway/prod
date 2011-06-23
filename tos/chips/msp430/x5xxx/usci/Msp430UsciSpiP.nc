@@ -43,6 +43,11 @@
  * @author João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
 
+/**
+* Added support for SpiPacket.send
+* @author João Gonçalves <joao.m.goncalves@ist.utl.pt> 
+*/
+
 generic module Msp430UsciSpiP () @safe() {
   provides {
     interface SpiPacket[ uint8_t client ];

@@ -43,6 +43,12 @@
  * Connected the SPI pins to HplMsp430GeneralIOC
  * @author João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
+/**
+* Connected the SPI pins to HplMsp430GeneralIOC
+*
+* @author João Gonçalves <joao.m.goncalves@ist.utl.pt>
+*/
+
 
 generic configuration Msp430UsciSpiB0C() {
   provides {
