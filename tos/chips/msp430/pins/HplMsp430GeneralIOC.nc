@@ -964,7 +964,8 @@ implementation {
 
    TA1CCR0 = P85;
    TA1CCR1 = P86;
-   TA1CCR2 = P73; */
+   TA1CCR2 = P73;
+*/
 
 #endif
 
