@@ -899,7 +899,7 @@ implementation {
    ACLK = P10;
    ADC12CLK = P27;
    DMAE0 = P27;
-
+   
    UCA0TXD = P34;
    UCA0RXD = P35;
    UCA0SIMO = P34;
@@ -940,8 +940,11 @@ implementation {
    ADC7 = P67;
    ADC8 = P50;
    ADC9 = P51;
-
 // there are no ADC's 10 and 11 according to datasheet
+   ADC12 = P74;
+   ADC13 = P75;
+   ADC14 = P76;
+   ADC15 = P77;
 
    ADC12 = P74;
    ADC13 = P75;
