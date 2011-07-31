@@ -61,4 +61,9 @@ implementation {
   Msp430UsciError = UartC.Msp430UsciError[CLIENT_ID];
 
   UsciC.ResourceConfigure[CLIENT_ID] -> UartC.ResourceConfigure[CLIENT_ID];
+
+  components HplMsp430GeneralIOC as GIO;
+  UartC.UTXD -> GIO.UCA0TXD;
+  UartC.URXD -> GIO.UCA0RXD;
+
 }
