@@ -46,6 +46,8 @@ enum {
 };
 
 #define __msp430x543x
+#define TOS_DEFAULT_BAUDRATE 9600
+
 //Unlock for Special funcionality of PINS such as SPI
 
 /* Use the PlatformAdcC component, and enable 8 pins */

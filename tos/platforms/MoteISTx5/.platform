@@ -1,5 +1,5 @@
-# Includes that should take precedence come first.  Platforms come before
-# chips because they may override files.  These must be specified as
+# Includes that should take precedence come first. Platforms come before
+# chips because they may override files. These must be specified as
 # @includes instead of -I's to @opts, otherwise the %T won't be processed
 # by ncc.
 
@@ -43,7 +43,7 @@ for (split(/\n/, <<'EOText'
   %T/lib/power
 
   %T/lib/util/keyvaluerecord
-  %T/lib/serialprintf
+  %T/lib/printf
 
 EOText
 )) {
@@ -89,4 +89,3 @@ $ENV{'CIL_MACHINE'} =
     "underscore_name=false " .
     "__builtin_va_list=true " .
     "__thread_is_keyword=true";
-
