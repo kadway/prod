@@ -244,49 +244,59 @@ module Msp430CPUFreqControlP @safe() {
   command error_t Msp430FreqControl.setDCORange(uint16_t value){  
   // value has to be in kHz
   // This is form the msp430f548A datasheet
-    uint16_t dcorsel, dcorsel_bits;   
+    uint16_t dcorsel, dcorsel_bits;
+    bool ok = FALSE;   
   
-     if((70 <= value) && (value <= 200)){
-       dcorsel_bits = 0x0000;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
+    if((70 <= value) && (value <= 200)){
+      dcorsel_bits = 0x0000;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
  
-     if((700 <= value) && (value <= (1024+700))){
-       dcorsel_bits = 0x0000;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
+    if((700 <= value) && (value <= (1024+700))){
+      dcorsel_bits = 0x0000;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
  
-     if((150 <= value) && (value <= 360)){
-       dcorsel_bits = 0x0010;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
+    if((150 <= value) && (value <= 360)){
+      dcorsel_bits = 0x0010;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
 
-      if(((1024+470) <= value) && (value <= ((3*1024)+450))){
-       dcorsel_bits = 0x0010;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
+    if(((1024+470) <= value) && (value <= ((3*1024)+450))){
+      dcorsel_bits = 0x0010;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
 
-      if((320 <= value) && (value <= 750)){
-       dcorsel_bits = 0x0010;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
+    if((320 <= value) && (value <= 750)){
+      dcorsel_bits = 0x0010;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
 
-      if((((3*1024)+170) <= value) && (value <= ((7*1024)+380))){
-       dcorsel_bits = 0x0020;
-       printf("DCO range is now: %x. \r\n", dcorsel_bits);
-      }
-  
-     else{
-       printf("The value of %x kHz is not accepted. \r\n", value);
+    if((((3*1024)+170) <= value) && (value <= ((7*1024)+380))){
+      dcorsel_bits = 0x0020;
+      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
+      ok = TRUE;
+    }
+
+   if(!ok){
+       printf("The value of %x (%d kHz) is not accepted. \r\n", value, value);
        return FAIL;
-      }
+     }
   
-    atomic{
       dcorsel = UCSCTL1;
       dcorsel &= 0xFF8F; //Clean DCORSEL bits
       dcorsel |= dcorsel_bits;
       UCSCTL1 = dcorsel;
-    }
+    
+
+    printf("For the frequency of: %d kHz. \r\n", value);
+    printf("Change the DCO range bits to: %x. \r\n", dcorsel_bits);
+
     return SUCCESS;
   }
 
@@ -302,15 +312,35 @@ module Msp430CPUFreqControlP @safe() {
     switch(call Msp430FreqControl.getFLLsource()){
   
       case SELREF_0:{
-        call Msp430FreqControl.setDCORange(value);
         atomic{
+          /* Disable FLL control */
+          __bis_SR_register(SR_SCG0);
+
+          if(call Msp430FreqControl.setDCORange(value) != SUCCESS){
+             printf("Could not set new DCO range. \r\n");
+             return FAIL;
+          }
+
           ucsctl_2 = UCSCTL2;
           ucsctl_2 &= (~FLLN_BITS);
           ucsctl_2 |= ((FLLN_BITS & ((value/XT1_FREQ) - 1)));
           UCSCTL2 = ucsctl_2;
+          
+          __bic_SR_register(SR_SCG0);               // Enable the FLL control loop
+
+          // Loop until DCO fault flag is cleared.  Ignore OFIFG, since it
+          // incorporates XT1 and XT2 fault detection.
+          do {
+            UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+            // Clear XT2,XT1,DCO fault flags
+            SFRIFG1 &= ~OFIFG;         // Clear fault flags
+            printf("Wait for DCO to settle.\r\n");
+          } while (UCSCTL7 & DCOFFG); // Test DCO fault flag
+
         } 
-        printf("Wrote: %x to UCSCTL2.\r\n", ucsctl_2);
-          break;
+        
+       printf("Wrote: %x to UCSCTL2.\r\n", ucsctl_2);
+       break;
       }
       default:{
         printf("There is a problem in finding FLL source. \r\n");
