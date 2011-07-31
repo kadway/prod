@@ -168,8 +168,8 @@ module Msp430XV2ClockControlP @safe() {
         SFRIFG1 &= ~OFIFG;                      // Clear fault flags
       } while (UCSCTL7 & DCOFFG); // Test DCO fault flag
 
-      /* Use REFOCLK for ACLK, and DCOCLKDIV for MCLK and SMCLK */
-      UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+      /* Use REFOCLK for ACLK, and DCOCLKDIV for SMCLK and DCOCLK SMCLK */
+      UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLK;
 
       /* DIVPA routes ACLK to external pin, undivided
        * DIVA uses ACLK at 2^15 Hz, undivided
