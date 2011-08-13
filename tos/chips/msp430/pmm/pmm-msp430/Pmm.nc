@@ -1,7 +1,5 @@
 /*
- * Copyright (c) 2011 Eric B. Decker
- * Copyright (c) 2010 People Power Co.
- * All rights reserved.
+ * Copyright (c) 2011 João Gonçalves
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,30 +31,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @author David Moss
- * @author Eric B. Decker <cire831@gmail.com>
- *
- * This provides a driver for communicating with the Power Management
- * Module provided on X5 family processors.
- *
- * This module should be called from processor initilization to change
- * the VCORE level.   It can also be called at other times if a change
- * to VCORE is needed (like if we need to run at a faster frequency).
- *
- * On x5 processors examined, VCORE_LEVEL in the PMM is initilized to 0.
- * But this should be checked with the processor data sheet.
- */
-
-#if !defined(__MSP430_HAS_PMM__)
-#error "Msp430PmmP: processor not supported, need PMM"
-#endif
-
-module Msp430PmmP {
-  provides interface Pmm;
-}
-implementation {
-
+interface Pmm {
   /**
    * Set the voltage level of the MSP430x core
    *  0x0 => DVcc > 1.8V
@@ -65,36 +40,33 @@ implementation {
    *  0x3 => DVcc > 2.4V
    */
 
-  command void Pmm.setVoltage(uint8_t level) {
+//====================================================================
+/**
+  * Set the minimum Vcore level for the desired frequency*/
+  command error_t setMinRequiredVCore(uint32_t freq);
 
-    // Open PMM registers for write access
-    PMMCTL0_H = 0xA5;
 
-    // Set SVS/SVM high side new level
-    SVSMHCTL = SVSHE + SVSHRVL0 * level + SVMHE + SVSMHRRL0 * level;
+//====================================================================
+/**
+  * Set the VCore to a new level if it is possible*/
 
-    // Set SVM low side to new level
-    SVSMLCTL = SVSLE + SVMLE + SVSMLRRL0 * level;
+  command error_t SetVCore (uint8_t level);
 
-    // Wait till SVM is settled
-    while ((PMMIFG & SVSMLDLYIFG) == 0) {
-    }
+//====================================================================
+/**
+  * Set the VCore to a higher level, if it is possible.
+  * Return a 1 if voltage at highside (Vcc) is to low
+  * for the selected Level (level).*/
 
-    // Clear already set flags
-    PMMIFG &= ~(SVMLVLRIFG + SVMLIFG);
+  command error_t SetVCoreUp (uint8_t level);
 
-    // Set VCore to new level
-    PMMCTL0_L = PMMCOREV0 * level;
+//====================================================================
+/**
+  * Set the VCore to a lower level.
+  * Return a 1 if voltage at highside (Vcc) is still to low
+  * for the selected Level (level).*/
 
-    // Wait till new level reached
-    if ((PMMIFG & SVMLIFG))
-      while ((PMMIFG & SVMLVLRIFG) == 0) {
-      }
-
-    // Set SVS/SVM low side to new level
-    SVSMLCTL = SVSLE + SVSLRVL0 * level + SVMLE + SVSMLRRL0 * level;
-
-    // Lock PMM registers for write access
-    PMMCTL0_H = 0x00;
-  }
+  command error_t SetVCoreDown (uint8_t level);
 }
+
+

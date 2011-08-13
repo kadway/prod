@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011 João Gonçalves
  * Copyright (c) 2011 Eric B. Decker
  * Copyright (c) 2010 People Power Co.
  * All rights reserved.
@@ -34,67 +35,17 @@
  */
 
 /**
+ * Power Management Module
+ *
  * @author David Moss
  * @author Eric B. Decker <cire831@gmail.com>
- *
- * This provides a driver for communicating with the Power Management
- * Module provided on X5 family processors.
- *
- * This module should be called from processor initilization to change
- * the VCORE level.   It can also be called at other times if a change
- * to VCORE is needed (like if we need to run at a faster frequency).
- *
- * On x5 processors examined, VCORE_LEVEL in the PMM is initilized to 0.
- * But this should be checked with the processor data sheet.
  */
 
-#if !defined(__MSP430_HAS_PMM__)
-#error "Msp430PmmP: processor not supported, need PMM"
-#endif
-
-module Msp430PmmP {
+configuration Msp430PmmC {
   provides interface Pmm;
 }
+
 implementation {
-
-  /**
-   * Set the voltage level of the MSP430x core
-   *  0x0 => DVcc > 1.8V
-   *  0x1 => DVcc > 2.0V
-   *  0x2 => DVcc > 2.2V
-   *  0x3 => DVcc > 2.4V
-   */
-
-  command void Pmm.setVoltage(uint8_t level) {
-
-    // Open PMM registers for write access
-    PMMCTL0_H = 0xA5;
-
-    // Set SVS/SVM high side new level
-    SVSMHCTL = SVSHE + SVSHRVL0 * level + SVMHE + SVSMHRRL0 * level;
-
-    // Set SVM low side to new level
-    SVSMLCTL = SVSLE + SVMLE + SVSMLRRL0 * level;
-
-    // Wait till SVM is settled
-    while ((PMMIFG & SVSMLDLYIFG) == 0) {
-    }
-
-    // Clear already set flags
-    PMMIFG &= ~(SVMLVLRIFG + SVMLIFG);
-
-    // Set VCore to new level
-    PMMCTL0_L = PMMCOREV0 * level;
-
-    // Wait till new level reached
-    if ((PMMIFG & SVMLIFG))
-      while ((PMMIFG & SVMLVLRIFG) == 0) {
-      }
-
-    // Set SVS/SVM low side to new level
-    SVSMLCTL = SVSLE + SVSLRVL0 * level + SVMLE + SVSMLRRL0 * level;
-
-    // Lock PMM registers for write access
-    PMMCTL0_H = 0x00;
-  }
+  components Msp430PmmP;
+  Pmm = Msp430PmmP;
 }
