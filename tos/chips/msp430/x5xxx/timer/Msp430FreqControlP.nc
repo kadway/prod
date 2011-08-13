@@ -46,6 +46,9 @@ module Msp430FreqControlP @safe() {
 const uint8_t FLLD_val [] = {1, 2, 4, 8, 16};
 const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
 
+const float dco0_max [] = {0.2, 0.36, 0.75, 1.51, 3.2, 6.0, 10.7, 19.6};
+const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
+  
   command uint8_t FreqControl.getFLLD(void){
     uint8_t flld;
       atomic flld = ((UCSCTL2 & FLLD_BITS) >> 12);
@@ -97,6 +100,7 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
   command error_t FreqControl.setMCLKFreq(uint32_t value){
     uint32_t freq;
     uint8_t source;
+    error_t result;
     /*
      *  Before changing the frequency call setMinRequiredVCore(freq)
      *  and verify if we need to change the core voltage
@@ -105,7 +109,7 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
     freq = call FreqControl.getMCLKFreq(source);
    
     if(freq == value){
-       printf("#error: MCLK frequency is already: %d Hz.\r\n", freq);
+       printf("#error: MCLK frequency is already: %d Hz.\r\n", (uint8_t)(freq/1000000));
        return FAIL;
     }
     
@@ -123,11 +127,13 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
         printf("MCLK is sourced by REFOCLK.\r\n");
         break;    
       case SELM__DCOCLK:
-        printf("MCLK is sourced by DCOCLK.\r\n");
-        return call FreqControl.setDCOFreq(value, FALSE);       
+        //printf("MCLK is sourced by DCOCLK.\r\n");
+        result = call FreqControl.setDCOFreq(value, FALSE);
+        break;
       case SELM__DCOCLKDIV:
-        printf("MCLK is sourced by DCOCLKDIV.\r\n");
-        return call FreqControl.setDCOFreq(value, TRUE);       
+        //printf("MCLK is sourced by DCOCLKDIV.\r\n");
+        result = call FreqControl.setDCOFreq(value, TRUE);
+        break;
       case SELM__XT2CLK:
         printf("MCLK is sourced by XT2CLK.\r\n");
         break;    
@@ -139,12 +145,12 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
     if(value < freq){
       call Pmm.setMinRequiredVCore(value);
     }
-   return SUCCESS;
+   return result;
   }
 
   command uint32_t FreqControl.getDCOFreq(bool isdcoclkdiv){
-     uint16_t flln, fllrefdiv, fllref, flld; 
-     uint32_t freq;
+     uint8_t flln, fllrefdiv, flld; 
+     uint32_t freq,  fllref;
        flln = call FreqControl.getFLLN();
        flld = call FreqControl.getFLLD();
        fllrefdiv = call FreqControl.getFLLREFDIV();
@@ -157,7 +163,7 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
     */       
     switch(call FreqControl.getFLLsource()){
       case SELREF_0:
-        fllref=XT1_FREQ; // 000 XT1CLK
+        fllref=(uint32_t) XT1_FREQ; // 000 XT1CLK
         break;
       case SELREF_1: //001 Reserved for future use. Defaults to XT1CLK.
       case SELREF_2: //010 REFOCLK
@@ -168,156 +174,97 @@ const uint8_t FLLREFDIV_val [] = {1, 2, 4, 6, 8, 12};
       case SELREF_7: //111 No selection. For the 'F543x and 'F541x non-A versions only, this defaults to XT2CLK. 
     }
 
-    if(isdcoclkdiv == TRUE){
+    if(isdcoclkdiv){
       freq = flld*(flln+1)*fllref/fllrefdiv;
-      printf("Actual DCO configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %d Hz\nFLLREFDIV = %d.\r\n", flln, flld, fllref, fllrefdiv);
-      printf("Actual DCOCLKDIV frequency is: %d Hz.\r\n", freq);
+     // printf("Actual DCO configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %lu Hz\nFLLREFDIV = %d.\r\n", flln, flld, fllref, fllrefdiv);
+     // printf("\nActual DCOCLKDIV frequency is: %lu Hz.\r\n", freq);
       return (freq); 
     }
     
     freq = (flln+1)*fllref/fllrefdiv;
-    printf("Actual DCO Configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %d Hz\nFLLREFDIV = %d.\r\n", flln, flld, fllref, fllrefdiv);
-    printf("Actual DCOCLK frequency is: %d Hz.\r\n", freq);
+    //printf("Actual DCO Configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %lu Hz\nFLLREFDIV = %d.\r\n",flln, flld, fllref, fllrefdiv);
+    //printf("\nActual DCOCLK frequency is: %lu Hz.\r\n", freq);
     return (freq); 
   }
 
   command error_t FreqControl.setDCORange(uint32_t value){  
-    uint16_t dcorsel, dcorsel_bits=0xF000;   
-     /* if((70 <= value) && (value <= 200)){
-      dcorsel_bits = 0x0000;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
- 
-    if((700 <= value) && (value <= 1700)){
-      dcorsel_bits = 0x0000;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
- 
-    if((150 <= value) && (value <= 360)){
-      dcorsel_bits = 0x0010;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((1470 <= value) && (value <= 3450)){
-      dcorsel_bits = 0x0010;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((320 <= value) && (value <= 750)){
-      dcorsel_bits = 0x0020;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((3170 <= value) && (value <= 7380)){
-      dcorsel_bits = 0x0020;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((640 <= value) && (value <= 1510)){
-      dcorsel_bits = 0x0030;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((6070 <= value) && (value <= 14000)){
-      dcorsel_bits = 0x0030;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((1300 <= value) && (value <= 3200)){
-      dcorsel_bits = 0x0040;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((12300 <= value) && (value <= 28200)){
-      dcorsel_bits = 0x0040;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((2500 <= value) && (value <= 6000)){
-      dcorsel_bits = 0x0050;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((value >= 23700) && (value <= 54100)){
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-      dcorsel_bits = 0x0050;
-      }
-
-    if((4600 <= value) && (value <= 10700)){
-      dcorsel_bits = 0x0060;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((39000 <= value) && (value <= 88000)){
-      dcorsel_bits = 0x0060;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-     }
-
-    if((8500 <= value) && (value <= 19600)){
-      dcorsel_bits = 0x0070;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if((60000 <= value) && (value <= 135000)){
-      dcorsel_bits = 0x0070;
-      printf("set DCORSEL bits to %x. \r\n", dcorsel_bits);
-    }
-
-    if(dcorsel_bits == 0xF000){
-       printf("The value of %x (%d kHz) is not accepted. \r\n", value, value);
-       return FAIL;
-     }*/
-  
-   // dcorsel = UCSCTL1;
-   //dcorsel |= dcorsel_bits;
+	bool rangefound = FALSE;
+	float ratio = 1.12;
+	uint8_t RSELx = 0;
+	uint8_t flld;
+	
+    flld = call FreqControl.getFLLD();
     
-    printf("Actual UCSCTL1 is: %x. \r\n", UCSCTL1);
+	//printf("Actual RSELx is: %x.\n", UCSCTL1);
+	//printf("Searching RSELx for the frequency of %d MHz.\n", (uint8_t)(value/MHZ));
+	
+	while(!rangefound){
+		if((value >= (uint32_t)((dco0_max[RSELx]*ratio)*MHZ)) && (value < (uint32_t)((dco31_min[RSELx]/ratio)*MHZ))){
+			rangefound = TRUE;
+			//printf("RSELx found. Use RSELx = %d!\n", RSELx);
+			}
+		else{
+			RSELx++;
+			//printf("Try RSELx = %d...\n", RSELx);
+		}  
+    }
     UCSCTL1 &= 0xFF8E; //Clean DCORSEL bits and enable modulation
-    printf("UCSCTL1 is now: %x . \r\n", UCSCTL1);
-    UCSCTL1 |= 0x0040;
-    printf("UCSCTL1 DCORSELx bits changed to: %x . \r\n", UCSCTL1);
-    printf("For the desired frequency of: %d Hz. \r\n", value);
+    //printf("Cleaned UCSCTL1. It is now: %x.\n", UCSCTL1);
+    UCSCTL1 |= (RSELx<<4); // Set RSELx bits
+    
+    //printf("UCSCTL1 RSELx bits changed to: %x . \r\n", UCSCTL1);
+    //printf("For the desired DCOCLK frequency of: %d MHz. \r\n", (uint8_t)(value/MHZ));
+    //printf("DCOCLKDIV is at: %d MHz. \r\n", (uint8_t)(value/(flld*MHZ)));
     return SUCCESS;
   }
  
    command error_t FreqControl.setDCOFreq(uint32_t value, bool isdcoclkdiv){
-    uint16_t ucsctl_2;
+      uint8_t flld, fllrefdiv; 
+      uint8_t count = 0;
       /*
        *  Only XT1 as FLL reference is implemented. 
        *  To find DCO config values do: (fFLLREFDIV*fDCO/fFFLLREF) - 1
        *  Make a call to setDCORange to ajust the DCO range to the desired frequency
        *  Just going to find the FLLN value, use fFLLFREFDIV = 1
        */
-      switch(call FreqControl.getFLLsource()){
+       flld = call FreqControl.getFLLD();
+       fllrefdiv = call FreqControl.getFLLREFDIV();
+       if(isdcoclkdiv)
+         value = value * flld;  // the DCOCLK is flld times bigger than DCOCLKDIV
+       switch(call FreqControl.getFLLsource()){
+        uint32_t fllref;
         case SELREF_0:
+          fllref = (uint32_t) XT1_FREQ;
           atomic{           
             __bis_SR_register(SR_SCG0);  // Disable FLL control
             if(call FreqControl.setDCORange(value) != SUCCESS){
              printf("Could not set new DCO range. \r\n");
              return FAIL;
             }
-            /*ucsctl_2 = UCSCTL2;
-            ucsctl_2 &= (~FLLN_BITS);
-            ucsctl_2 |= ((FLLN_BITS & ((value/XT1_FREQ) - 1)));
-            UCSCTL2 = ucsctl_2;
-            */
-            UCSCTL2 &= (~FLLN_BITS);
-            UCSCTL2 |= ((FLLN_BITS & ((value/XT1_FREQ) - 1)));
-                      
-            __bic_SR_register(SR_SCG0);  // Enable the FLL control loop
-
-            printf("Wait for DCO to settle...\r\n");
+            //printf("\n\nSetting DCO Frequency to %d MHz.\nThe reference frequency is %lu Hz.\nFLLD is %d.\nFLLREFDIV is %d.\n\n", (uint16_t)(value/1000000), fllref, flld, fllrefdiv);
+            //printf("Going to change the FLLN to %d.\r\n\n", (uint16_t) (((value)*fllrefdiv/(fllref*flld)) - 1));
             
+            UCSCTL2 &= (~FLLN_BITS);
+            UCSCTL2 |= (uint16_t) (((value)*fllrefdiv/(fllref*flld)) - 1);
+            //printf("Wrote: %x to UCSCTL2.\r\n", UCSCTL2);
+            
+            __bic_SR_register(SR_SCG0);  // Enable the FLL control loop
+                       
             // Loop until DCO fault flag is cleared.  Ignore OFIFG, since it
             // incorporates XT1 and XT2 fault detection.
             do {
+              if(count == 5)
+                printf("Wait for DCO to settle...\r\n");
+              else if(count == 10)
+					count = 0;
+              count++;
               UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
               // Clear XT2,XT1,DCO fault flags
               SFRIFG1 &= ~OFIFG;         // Clear fault flags
             } while (UCSCTL7 & DCOFFG); // Test DCO fault flag
-            printf("DCO OK!\r\n");
+            //printf("DCO OK!\r\n");
           }         
-          atomic printf("Wrote: %x to UCSCTL2.\r\n", UCSCTL2);
+         
           return SUCCESS;
         default:
           printf("There is a problem in finding FLL source. \r\n");
