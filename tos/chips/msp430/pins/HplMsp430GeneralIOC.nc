@@ -946,11 +946,6 @@ implementation {
    ADC14 = P76;
    ADC15 = P77;
 
-   ADC12 = P74;
-   ADC13 = P75;
-   ADC14 = P76;
-   ADC15 = P77;
-
 //Same outputs but on different pins, need to change the names if to be used
 // Not complete yet
 /*
