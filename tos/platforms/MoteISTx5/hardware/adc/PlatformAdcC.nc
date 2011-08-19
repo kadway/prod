@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011 João Gonçalves.
  * Copyright (c) 2010 People Power Co.
  * All rights reserved.
  *
@@ -56,14 +57,14 @@ configuration PlatformAdcC {
 implementation {
 
   components HplMsp430GeneralIOC;
-  A0 = HplMsp430GeneralIOC.Port20;
-  A1 = HplMsp430GeneralIOC.Port21;
-  A2 = HplMsp430GeneralIOC.Port22;
-  A3 = HplMsp430GeneralIOC.Port23;
-  A4 = HplMsp430GeneralIOC.Port24;
-  A5 = HplMsp430GeneralIOC.Port25;
-  A6 = HplMsp430GeneralIOC.Port26;
-  A7 = HplMsp430GeneralIOC.Port27;
+  A0 = HplMsp430GeneralIOC.ADC0;
+  A1 = HplMsp430GeneralIOC.ADC1;
+  A2 = HplMsp430GeneralIOC.ADC2;
+  A3 = HplMsp430GeneralIOC.ADC3;
+  A4 = HplMsp430GeneralIOC.ADC4;
+  A5 = HplMsp430GeneralIOC.ADC5;
+  A6 = HplMsp430GeneralIOC.ADC6;
+  A7 = HplMsp430GeneralIOC.ADC7;
 
   components Msp430TimerC;
   TimerA = Msp430TimerC.Timer0_A;
@@ -71,5 +72,4 @@ implementation {
   ControlA1 = Msp430TimerC.Control0_A1;
   CompareA0 = Msp430TimerC.Compare0_A0;
   CompareA1 = Msp430TimerC.Compare0_A1;
-
 }

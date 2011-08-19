@@ -60,4 +60,6 @@ implementation {
 
   components PlatformClockC;
   PlatformP.PlatformClock -> PlatformClockC;
+  
+  components PlatformAdcC;
 }
