@@ -51,9 +51,9 @@ enum {
 //Unlock for Special funcionality of PINS such as SPI
 
 /* Use the PlatformAdcC component, and enable 8 pins */
-//#define ADC12_USE_PLATFORM_ADC 1
-//#define ADC12_PIN_AUTO_CONFIGURE 1
-//#define ADC12_PINS_AVAILABLE 8
+#define ADC12_USE_PLATFORM_ADC 1
+#define ADC12_PIN_AUTO_CONFIGURE 1
+#define ADC12_PINS_AVAILABLE 8
 
 /* @TODO@ Disable probe for XT1 support until the anomaly observed in
  * apps/bootstrap/LocalTime is resolved. */
