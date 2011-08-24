@@ -1,7 +1,5 @@
 /*
  * Copyright (c) 2011 João Gonçalves
- * Copyright (c) 2010-2011 DEXMA SENSORS SL
- * Copyright (c) 2011 ZOLERTIA LABS
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,37 +33,28 @@
  */
 
 /*
- * Simple test application to test ADC + DMA bundle
- *
- * @author: Xavier Orduna <xorduna@dexmatech.com>
- * @author: Antonio Linan <alinan@zolertia.com>
+ * Simple test application to test ADC
+ * Single ADC channel doing repeated conversions
+ * @author: João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
 
-//#include "StorageVolumes.h"
 
 configuration FastADCAppC { }
 
 implementation {
+  
   components MainC, FastADCC as App;
   App -> MainC.Boot;
   
   components LedsC;
   App.Leds -> LedsC;
-
-  components new TimerMilliC() as TimerBlink;
-  App.TimerBlink -> TimerBlink;
-  components new TimerMilliC() as TimerSample;
-  App.TimerSample -> TimerSample;
-  
+ 
   components new Msp430Adc12ClientAutoRVGC() as Fadc;
   App.overflow -> Fadc;
   App.adc -> Fadc;
   App.Resource -> Fadc;
   Fadc.AdcConfigure -> App.AdcConfigure;
   components SerialPrintfC;
-  
-  /*components new BlockStorageC(VOLUME_BLOCKTEST);
-  App.BlockWrite -> BlockStorageC.BlockWrite;
-  App.BlockRead -> BlockStorageC.BlockRead;  */
+
   
 }
