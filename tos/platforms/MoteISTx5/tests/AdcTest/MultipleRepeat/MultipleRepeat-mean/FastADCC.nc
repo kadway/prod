@@ -63,7 +63,8 @@ module FastADCC{
 implementation{
       
   uint16_t adb[SAMPLES];
-    
+  uint8_t count = 0;
+   
   msp430adc12_channel_config_t adcconfig = {
 
     inch: INPUT_CHANNEL_A1,
@@ -72,7 +73,7 @@ implementation{
     adc12ssel: SHT_SOURCE_ACLK,
     adc12div: SHT_CLOCK_DIV_1,
     sht: SAMPLE_HOLD_4_CYCLES,
-    sampcon_ssel: SAMPCON_SOURCE_SMCLK,
+    sampcon_ssel: SAMPCON_SOURCE_ACLK,
     sampcon_id: SAMPCON_CLOCK_DIV_1
   };
  
@@ -87,17 +88,15 @@ implementation{
   error_t configureMultipleRepeat();
     
   event void Boot.booted(){
-    printf("Booting...\n"); 
     call Resource.request();
   }
   
   event void Resource.granted(){
     error_t e = FAIL;
-      printf("Resource Granted\n");
       while(e != SUCCESS){
         e = configureMultipleRepeat();
       }
-      printf("Starting 1st conversion\n");
+      printf("Starting the ADC...\n");
 	  if(call adc.getData() != SUCCESS)
 	    printf("Conversion didn't start!\n");
   } 
@@ -108,8 +107,10 @@ implementation{
   async event void overflow.memOverflow(){ }
  
   async event uint16_t *adc.multipleDataReady(uint16_t *buffer, uint16_t numSamples){
-    printf("Samples ready\n");
     printadb();
+    if(count==9)
+      return NULL;
+     count++;
     return buffer;
   }
   
@@ -120,17 +121,42 @@ implementation{
   
   void printadb(){
     uint16_t i;
-    uint32_t sum;
+    float sum = 0;
+    uint16_t a;
+    float gain = 37.461;
+    float mil = 1000;
+    float dois_meio = 2.5;
+    float quat = 4095;
     float voltage = 0;
-    printf("Printing buffer mean\n");
-    for(i = 0; i < SAMPLES; i++)
-      sum += adb[i];
+    float current = 0;
+    float vsense = 0;
+      printf("\nPrinting ADC set of samples Nº%d.\n", count);
+      for(i = 0; i < SAMPLES; i++){
+       sum += (float) adb[i];
+       printf("Sample %d =", i);
+       printfFloat((float) adb[i]);
+       printf("\n");
+    }
       sum = sum/SAMPLES;
       
-      printf("Sample mean = %d -> Voltage Mean=", (uint16_t) sum);
-      voltage = sum*2.5/4095;
+      printf("Sample mean =");
+      printfFloat(sum);
+      printf("\n");
+      
+      printf("Vout mean (into ADC) =");
+      voltage = sum*dois_meio/quat;
       printfFloat(voltage);
-    
+      printf(" V\n");
+      
+      vsense = (voltage/gain)*mil; //value in mV (Gm.Rout=37.461)
+      printf("Vsense =");
+      printfFloat(vsense);
+      printf(" mV\n");
+      
+      current = vsense/1.01; //current in mA, Rsense = 1.01 Ohm
+      printf("Current =");
+      printfFloat(current);
+      printf(" mA\n");    
   }
 
   void printfFloat(float toBePrinted) {
@@ -151,7 +177,7 @@ implementation{
 		f0 = f*10;   f0 %= 10;
 		f1 = f*100;  f1 %= 10;
 		f2 = f*1000; f2 %= 10;
-		printf("%c%ld.%d%d%d Volt\n", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
+		printf("%c%ld.%d%d%d", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
   } 
   
   void showerror(){
