@@ -22,6 +22,11 @@ for (split(/\n/, <<'EOText'
   %T/chips/msp430/pmm/pmm-msp430
   %T/chips/msp430/pmm
   %T/chips/msp430/adc12
+  %T/chips/msp430/flash/settings
+  %T/chips/msp430/flash/driver
+  %T/chips/msp430/flash/constants
+  %T/chips/msp430/crc16
+  %T/chips/msp430/wdt
 
   %T/platforms/MoteISTx5/chips/cc2420
   %T/chips/cc2420
