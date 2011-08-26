@@ -13,7 +13,8 @@ module FlashTestP @safe()
   uses interface Boot;
   uses interface Settings;
   uses interface Init;
-
+  uses interface Msp430Flash;
+  uses interface Client;
  }
 implementation
 {
@@ -22,28 +23,28 @@ implementation
     uint16_t t0 = TA0R;
     while((TA0R - t0) <= u);
   }
-
-  uint8_t data[] = {1,2,3,4,5,6,7,8};
+  
+  //prototypes
+  void test(void);
+  
+  uint8_t data[] = {9,33,3,2,5,6,9,25};
   event void Boot.booted(){
    printf("Booted.\n");
-   call Init.init();
+   
+  if(call Msp430Flash.isFirstBoot() == TRUE);
+    printf("It's First boot\n");
+   
+   call Init.init(); // this is the first client
+   //if(call Client.FlashTestClient() == SUCCESS) // this is the second client
+    // printf("First Client: Second Client as called init");
+        
   }
   
   event void Settings.requestLogin(){
     error_t status;
     uint8_t i;
-  /**
-   * @param data Pointer to the buffer that contains the local
-   *     component's configuration data in global memory.
-   * @param size Size of the buffer that contains local config data.
-   * @return 
-   *     SUCCESS if the client got registered and the data loaded with CRC OK
-   *     EINVAL if the client got registered and the data didn't load (i.e.
-   *         the very first time you power up the device perhaps).
-   *     ESIZE if there is not enough memory
-   *     FAIL if the client cannot login at this time because you
-   *         weren't paying attention to the instructions. :)
-   */
+    
+    printf("First Client: ");
     printf("Request login.\n");
    
     status = call Settings.login((void*) data, sizeof(data)*sizeof(uint8_t));
@@ -60,13 +61,20 @@ implementation
         break;
       }
       case SUCCESS:{
-	    printf("Data is now loaded from flash.\n");
-	    
-	    printf("Data is: ");
-	    for(i=0; i<sizeof(data); i++)
-          printf("%d ", data[i]);
-
-	    break;
+	    printf("First Client loaded: ");
+	    /*printf("Loading to flash: ");
+	    for(i=0; i<sizeof(data); i++){
+	      data[i] = 11;
+	      printf("%d ", data[i]);
+	    }  
+	    if(call Settings.store() == SUCCESS){
+	      printf("First Client: ");
+	      printf("Data is now loaded from flash.\n");
+        }*/
+        for(i=0; i<sizeof(data); i++)
+	      printf("%d ", data[i]);
+	    printf("\n");
+        break;
       }
       case FAIL:{
 		printf("The client cannot login at this time because you weren't paying attention to the instructions. :).\n");

@@ -22,4 +22,8 @@ implementation
   components SettingsP;
   FlashTestP.Init -> SettingsP;
   
-}
+  components Msp430FlashC;
+  FlashTestP.Msp430Flash -> Msp430FlashC.Msp430Flash;
+  
+  components ClientC;
+ }
