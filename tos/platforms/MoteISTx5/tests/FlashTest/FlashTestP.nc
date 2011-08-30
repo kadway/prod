@@ -14,7 +14,6 @@ module FlashTestP @safe()
   uses interface Settings;
   uses interface Init;
   uses interface Msp430Flash;
-  uses interface Client;
  }
 implementation
 {
