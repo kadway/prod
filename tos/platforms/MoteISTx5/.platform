@@ -1,5 +1,5 @@
-# Includes that should take precedence come first. Platforms come before
-# chips because they may override files. These must be specified as
+# Includes that should take precedence come first.  Platforms come before
+# chips because they may override files.  These must be specified as
 # @includes instead of -I's to @opts, otherwise the %T won't be processed
 # by ncc.
 
@@ -19,9 +19,11 @@ for (split(/\n/, <<'EOText'
   %T/chips/msp430
   %T/chips/msp430/pins
   %T/chips/msp430/timer
+
   %T/chips/msp430/pmm/pmm-msp430
   %T/chips/msp430/pmm
   %T/chips/msp430/adc12
+
   %T/chips/msp430/flash/settings
   %T/chips/msp430/flash/driver
   %T/chips/msp430/flash/constants
@@ -94,3 +96,4 @@ $ENV{'CIL_MACHINE'} =
     "underscore_name=false " .
     "__builtin_va_list=true " .
     "__thread_is_keyword=true";
+
