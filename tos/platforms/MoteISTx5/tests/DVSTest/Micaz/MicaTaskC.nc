@@ -1,6 +1,3 @@
-
-
-
 configuration MicaTaskC {
 }
 implementation {

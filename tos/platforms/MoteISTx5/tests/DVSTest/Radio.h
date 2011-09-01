@@ -1,8 +1,8 @@
 #define MOTEIST_NODE_ID 1 //for MoteIST
 #define MICA_NODE_ID 2
-#define ITERATIONS 50
-#define DEADLINE 2000  // 2 sec
-#define PERIOD 4000 //1 sec
+#define ITERATIONS 20
+#define DEADLINE 1000  // 2 sec
+#define PERIOD 2000 //1 sec
 
 
 enum {
@@ -26,8 +26,7 @@ typedef nx_struct MicaMsg {
 
 typedef nx_struct MoteISTMsg {
   nx_uint16_t nodeid; //node id
-  nx_bool task_done; //task done: 1 means done
-                     //0 means ok to start task
+  nx_uint16_t state; 
 } MoteISTMsg;
 
 
