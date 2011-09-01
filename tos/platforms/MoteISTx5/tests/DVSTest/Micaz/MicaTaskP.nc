@@ -19,7 +19,11 @@ implementation {
   bool busy = FALSE;
   uint16_t missedDeadlines = 0;
   uint16_t metDeadlines = 0;
-
+  uint8_t deadline = 100; //now using this one instead of the one in radio.h
+  
+  //prototypes
+  error_t MicaSendMsg(uint8_t state);
+  
   event void Boot.booted() {
     call AMControl.start(); //start radio
   }
@@ -50,7 +54,6 @@ implementation {
     MicaMsg* micaz_m;
    
     if (len == sizeof(MoteISTMsg)) {
-			//call Leds.led2Toggle();
       mist_m = (MoteISTMsg*)payload;
       if(mist_m->nodeid == MOTEIST_NODE_ID){
 				if (!busy) { //check if radio is busy
@@ -60,7 +63,7 @@ implementation {
           }
           micaz_m->nodeid = MICA_NODE_ID; //assign Micaz ID
           micaz_m->task_i = ITERATIONS;
-					micaz_m->deadline = DEADLINE;
+					micaz_m->deadline = deadline;
 					micaz_m->missed = missedDeadlines;
           micaz_m->met = metDeadlines;
 					
@@ -69,16 +72,16 @@ implementation {
               micaz_m->state = MICA_START;
               break;
             case MICA_START: // MoteIST has started
-              call Timer0.startOneShot(DEADLINE);
+              call Timer0.startOneShot(deadline);
               return msg; // At this point don't need to send msg to MoteIST, return
             case MICA_DEADLINE_MET:
               call Timer0.stop(); //stop timer, deadline is met
-              call Leds.led1On();
+              call Leds.led1Toggle();
               micaz_m->met = ++metDeadlines;
               micaz_m->state = MICA_DEADLINE_MET;
               break;
             case MICA_DEADLINE_MISS: // MoteIST missed the deadline, too bad.. but nothing to do here
-              call Leds.led0On();
+              call Leds.led0Toggle();
               return msg;
 						default:
           }	
@@ -93,42 +96,35 @@ implementation {
   
       
   
-  event void Timer0.fired() { //deadline Reached
+  event void Timer0.fired(){ //deadline Reached
+    missedDeadlines++;
+    MicaSendMsg(MICA_DEADLINE_MISS);
+  }
+  
+  event void Timer1.fired() { //make new request
+    MicaSendMsg(MICA_REQUEST);
+	}
+  
+  //functions
+  error_t MicaSendMsg(uint8_t state){
+    
     MicaMsg* micaz_m;
 		if (!busy) { //check if radio is busy
       micaz_m = (MicaMsg*)(call Packet.getPayload(&pkt, sizeof(MicaMsg)));
       if (micaz_m == NULL){
-				return;
+				return FAIL;
       }
 			micaz_m->nodeid = MICA_NODE_ID;
 			micaz_m->task_i = ITERATIONS; // 0 for deadline miss
-			micaz_m->deadline = DEADLINE;
-			micaz_m->missed = ++missedDeadlines;
+			micaz_m->deadline = deadline;
+			micaz_m->missed = missedDeadlines;
 			micaz_m->met = metDeadlines;
-			micaz_m->state = MICA_DEADLINE_MISS;
+			micaz_m->state = state;
 			if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MicaMsg)) == SUCCESS) {
 				busy = TRUE;
       }
     }
+    return SUCCESS;
   }
-  event void Timer1.fired() { //make new request
-    MicaMsg* micaz_m;
-		if (!busy) { //check if radio is busy
-      micaz_m = (MicaMsg*)(call Packet.getPayload(&pkt, sizeof(MicaMsg)));
-      if (micaz_m == NULL){
-				return;
-      }
-      micaz_m->nodeid = MICA_NODE_ID; //assign Micaz ID
-			micaz_m->task_i = ITERATIONS;
-      micaz_m->deadline = DEADLINE;
-      micaz_m->missed = missedDeadlines;
-      micaz_m->met = metDeadlines;
-      micaz_m->state = MICA_REQUEST;
-      if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MicaMsg)) == SUCCESS) {
-        call Leds.led2On();
-        busy = TRUE;
-      }
-    }
-	}
   
 }

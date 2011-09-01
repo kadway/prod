@@ -1,8 +1,8 @@
 #define MOTEIST_NODE_ID 1 //for MoteIST
 #define MICA_NODE_ID 2
-#define ITERATIONS 20
-#define DEADLINE 1000  // 2 sec
-#define PERIOD 2000 //1 sec
+#define ITERATIONS 200
+#define DEADLINE 500 //0.1 sec
+#define PERIOD 1000 //1 sec
 
 
 enum {

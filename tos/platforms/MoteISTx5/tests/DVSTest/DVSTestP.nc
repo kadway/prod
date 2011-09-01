@@ -20,8 +20,13 @@ module DVSTestP {
 implementation {
   
   message_t pkt;
-  norace bool busy = FALSE;
-  norace uint16_t state;
+  bool busy = FALSE;
+  uint16_t state;
+ 
+  // prototypes  
+  error_t SendMsgTaskDone();
+  
+  
   event void Boot.booted() {
     //call Timer0.startPeriodic(ADC_SAMPLE_TIME);
     printf("Booted\n");
@@ -32,30 +37,27 @@ implementation {
   }
   
   event void AMControl.startDone(error_t err) {
-    if (err == SUCCESS) {
+    if (err == SUCCESS) {}
      // call Timer0.startPeriodic(TIMER_PERIOD_MILLI);
-    }
-    else {
+    else 
       call AMControl.start();
-    }
   }
   
     event void AMControl.stopDone(error_t err) {
   }
 
   event void AMSend.sendDone(message_t* msg, error_t err) {
-    if (&pkt == msg) {
+    if (&pkt == msg)
       busy = FALSE;
       //printf("clear busy-> state: %d\n", state);
-    }
-    else
-      printf("some's worng in the sending\n");
+    //else
+     // printf("some's worng in the sending\n");
   }
 
   event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     MoteISTMsg* mist_m;
     MicaMsg* micaz_m;
-    uint8_t dummy;
+
     if (len == sizeof(MicaMsg)) {
       micaz_m = (MicaMsg*)payload;
       /*
@@ -73,24 +75,24 @@ implementation {
           switch(micaz_m->state){
             
             case MICA_REQUEST:
-          //  printf("Mica: REQUEST\n\n");
+              printf("Mica: REQUEST\n\n");
               mist_m->state = MICA_REQUEST;
               state = MICA_REQUEST;
               break;
             case MICA_START:
-            //printf("Mica: START. \niterations=%d\ndeadline=%d\nmissed=%d\nmet=%d\n\n", micaz_m->task_i, micaz_m->deadline, micaz_m->missed, micaz_m->met);
+              printf("Mica: START. \niterations=%d\ndeadline=%d\nmissed=%d\nmet=%d\n\n", micaz_m->task_i, micaz_m->deadline, micaz_m->missed, micaz_m->met);
               mist_m->state = MICA_START;
               call Tasks.getFibonacci(micaz_m->task_i, micaz_m->deadline);
               state = MICA_START;
               break;
             case MICA_DEADLINE_MET:
               call Leds.led2Toggle();
-            //printf("Mica DEADLINE_MET:\nmissed=%d\nmet=%d\n\n", micaz_m->missed, micaz_m->met);
+              printf("Mica DEADLINE_MET:\nmissed=%d\nmet=%d\n\n", micaz_m->missed, micaz_m->met);
               return msg;
               break;
             case MICA_DEADLINE_MISS:
               call Leds.led1Toggle();
-            //printf("Mica: DEADLINE_MISS\nmissed=%d\nmet=%d\n\n", micaz_m->missed, micaz_m->met);
+              printf("Mica: DEADLINE_MISS\nmissed=%d\nmet=%d\n\n", micaz_m->missed, micaz_m->met);
               return msg;
               break;
             default:
@@ -100,7 +102,7 @@ implementation {
            // situation where the event fibonacci one see's the busy flag at false if there 
            //  is a printf here, the dummy for() does not work either
            // for(dummy = 0; dummy++; dummy<14000){dummy++;}
-             printf("dummy\n");
+            // printf("dummy\n");
             busy = TRUE;
           }
         }//if !busy
@@ -110,36 +112,37 @@ implementation {
   }
   
   event void Tasks.FibonacciDone(uint16_t iterations, uint32_t elapsedTime, error_t status){
-	  MoteISTMsg* mist_m;
-    //printf("App: fib dne\n");
-	  if(status!= SUCCESS){
-	    //printf("App: Deadline Missed!\n Iterations left:%d\nelapsed time: %lu\n\n", iterations, elapsedTime);
-		}
-		else{
-	    
-	    if (!busy) { //check if radio is busy
-        /*build the packet*/
-        //printf("App: Deadline met!\nFinished at %lu\n\n", elapsedTime);
-        mist_m = (MoteISTMsg*)(call Packet.getPayload(&pkt, sizeof(MoteISTMsg)));
-        if (mist_m == NULL){
-          printf("App: null pointer\n");
-	        return;
-        }
-        mist_m->nodeid = MOTEIST_NODE_ID; //assign MoteIST ID
-        mist_m->state = MICA_DEADLINE_MET; // task done in time
-        state = MICA_DEADLINE_MET;
-        /*send the packet*/
-        if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MoteISTMsg)) == SUCCESS) {
-            //printf("set busy-> state: %d \n", mist_m->state);
-            busy = TRUE;
-        }
-			} //if(!busy)
-		}//else
+    if(SendMsgTaskDone()!=SUCCESS)
+      call Timer0.startPeriodic(1);
   }
   event void Tasks.FibonacciIterationDone(){ }
   
-  event void Timer0.fired() {}
+  event void Timer0.fired() {
+    if(SendMsgTaskDone()==SUCCESS)
+      call Timer0.stop();
+  }
   
   event void Timer1.fired() {}
   
+  
+  //functions
+  error_t SendMsgTaskDone(){
+    MoteISTMsg* mist_m;
+    if (!busy) {//check if radio is busy
+      /*build the packet*/
+      mist_m = (MoteISTMsg*)(call Packet.getPayload(&pkt, sizeof(MoteISTMsg)));
+      if (mist_m == NULL){
+        printf("App: null pointer\n");
+	      return FAIL;
+      }
+      mist_m->state = MICA_DEADLINE_MET; // task done in time
+      state = MICA_DEADLINE_MET;
+      /*send the packet*/
+      if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MoteISTMsg)) == SUCCESS){
+        busy = TRUE;
+      }
+      return SUCCESS;
+    } //if(!busy)
+  return FAIL;
+  }
 }
