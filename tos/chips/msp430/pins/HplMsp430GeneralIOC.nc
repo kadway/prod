@@ -289,7 +289,7 @@ configuration HplMsp430GeneralIOC {
 
   // x5 family: cc430f5137, msp430x541x, msp430f5438{,a}
 
-#if defined(__msp430x543x) || defined(__msp430x541x)
+#if defined __msp430x54xA
 
 //duplicate ouputs on different pins from the ones mapped are not defined yet
 
@@ -869,9 +869,7 @@ implementation {
   SVSOUT = P57;
 #endif
 
-
-#if defined(__msp430x543x) || defined(__msp430x541x)
-
+#if defined(__msp430x54xA)
    TA0CCR0 = P11;
    TA0CCR1 = P12;
    TA0CCR2 = P13;
