@@ -1,5 +1,5 @@
 #include <Timer.h>
-#include "../RadioMessageType.h"
+#include "../RadioNoAdc/Radio.h"
 
 module MicaTaskP {
   uses interface Boot;
@@ -17,20 +17,23 @@ implementation {
   
   message_t pkt;
   bool busy = FALSE;
+  bool up = TRUE;
   uint16_t missedDeadlines = 0;
   uint16_t metDeadlines = 0;
+  uint16_t deadline = 100; //now using this one instead of the one in radio.h
+  uint16_t iterations = 100; //now using this one instead of the one in radio.h
+  uint16_t numRequest = 0; //count the number of requests so far
   
   //prototypes
   error_t MicaSendMsg(uint8_t state);
   
   event void Boot.booted() {
-    call Leds.led2On();
     call AMControl.start(); //start radio
   }
   
   event void AMControl.startDone(error_t err) {
     if (err == SUCCESS) {
-       call Timer1.startPeriodic(PERIOD);
+      call Timer1.startPeriodic(PERIOD);
     }
     else {
       call AMControl.start();
@@ -42,7 +45,7 @@ implementation {
 
   event void AMSend.sendDone(message_t* msg, error_t err) {
     if (&pkt == msg) {
-      busy = FALSE;	
+      busy = FALSE;		
 		}
   }
 
@@ -59,8 +62,8 @@ implementation {
 						return 0;
           }
           micaz_m->nodeid = MICA_NODE_ID; //assign Micaz ID
-          micaz_m->task_i = ITERATIONS;
-					micaz_m->deadline = DEADLINE;
+          micaz_m->task_i = iterations;
+					micaz_m->deadline = deadline;
 					micaz_m->missed = missedDeadlines;
           micaz_m->met = metDeadlines;
 					
@@ -69,12 +72,11 @@ implementation {
               micaz_m->state = START;
               break;
             case STARTED: // MoteIST has started
-              call Leds.led1Toggle();
-              call Timer0.startOneShot(DEADLINE);
+              call Timer0.startOneShot(deadline);
               return msg; // At this point don't need to send msg to MoteIST, return
             case DEADLINE_MET:
               call Timer0.stop(); //stop timer, deadline is met
-              call Leds.led2Toggle();
+              call Leds.led1Toggle();
               micaz_m->met = ++metDeadlines;
               micaz_m->state = DEADLINE_MET;
               break;
@@ -91,14 +93,40 @@ implementation {
     return msg;
   }
   
+      
+  
   event void Timer0.fired(){ //deadline Reached
     missedDeadlines++;
-    MicaSendMsg(DEADLINE_MISS);
     call Leds.led0Toggle();
+    MicaSendMsg(DEADLINE_MISS);
   }
   
-  event void Timer1.fired() { //new period, make new request 
+  event void Timer1.fired(){ //make new request
     MicaSendMsg(REQUEST);
+    numRequest++;
+    
+    if(numRequest>3){
+      switch(up){
+        case TRUE:
+          if(iterations < ITERATIONS)
+            iterations += 200;
+          else{
+            up = FALSE;
+            return;
+          }
+          break;
+        case FALSE:
+          if(iterations > 200)
+            iterations -= 200;
+          else{
+            call Timer1.stop();
+            return;
+          }
+          break;
+        default:
+      }
+      numRequest=0;
+    }
 	}
   
   //functions
@@ -111,12 +139,11 @@ implementation {
 				return FAIL;
       }
 			micaz_m->nodeid = MICA_NODE_ID;
-			micaz_m->task_i = ITERATIONS;
-			micaz_m->deadline = DEADLINE;
+			micaz_m->task_i = iterations; // 0 for deadline miss
+			micaz_m->deadline = deadline;
 			micaz_m->missed = missedDeadlines;
 			micaz_m->met = metDeadlines;
 			micaz_m->state = state;
-      
 			if (call AMSend.send(AM_BROADCAST_ADDR, &pkt, sizeof(MicaMsg)) == SUCCESS) {
 				busy = TRUE;
       }

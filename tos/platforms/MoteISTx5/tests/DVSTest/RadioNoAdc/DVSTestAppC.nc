@@ -34,7 +34,6 @@ implementation {
   App.Receive -> AMReceiverC;
   
   //for frequency control
-  
   components Msp430FreqControlC;
   App.FreqControl -> Msp430FreqControlC;
 }
