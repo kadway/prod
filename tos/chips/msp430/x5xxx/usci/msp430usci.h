@@ -36,29 +36,30 @@ typedef struct msp430_usci_config_t {
 #define TOS_DEFAULT_BAUDRATE 115200
 #endif /* TOS_DEFAULT_BAUDRATE */
 
-#ifndef DEFAULT_UART_SOURCE
-#define DEFAULT_UART_SOURCE
-#endif /* Use the 32kHz crystal or REFOCLK */
-
 msp430_usci_config_t msp430_usci_uart_default_config = {
   /* N81 UART mode driven by SMCLK */
 
-#ifdef DEFAULT_UART_SOURCE
+#ifdef UART_SOURCE_REFOCLK
   ctlw0 : (0 << 8) | UCSSEL__ACLK,
 #else
   ctlw0 : (0 << 8) | UCSSEL__SMCLK,
 #endif
 
-#ifdef DEFAULT_UART_SOURCE
+#ifdef UART_SOURCE_REFOCLK
 #if 9600 == TOS_DEFAULT_BAUDRATE
  /* SLAU259 Table 16-4 2^20Hz 9600: UBR=3, BRS=3, BRF=0 */
   brw : 3, // 9600
   mctl : UCBRF_0 + UCBRS_3
-#endif 
+#endif
 #elif 9600 == TOS_DEFAULT_BAUDRATE
+#ifdef UART_SMCLK_XTAL_4MHz
+  brw : 104, // 9600
+  mctl : UCBRF_0 + UCBRS_1
+#else
   /* SLAU259 Table 16-4 2^20Hz 9600: UBR=109, BRS=2, BRF=0 */
   brw : 109, // 9600
   mctl : UCBRF_0 + UCBRS_2
+#endif
 #elif 19200 == TOS_DEFAULT_BAUDRATE
   /* SLAU259 Table 16-4 2^20Hz 19200: UBR=54, BRS=2, BRF=0 */
   brw : 54, // 19200
@@ -72,9 +73,14 @@ msp430_usci_config_t msp430_usci_uart_default_config = {
   brw : 18, // 57600
   mctl : UCBRF_0 + UCBRS_1
 #elif 115200 == TOS_DEFAULT_BAUDRATE
+#ifdef UART_SMCLK_XTAL_4MHz
+  brw : 8, // 115200
+  mctl : UCBRF_0 + UCBRS_6
+#else
   /* SLAU259 Table 16-4 2^20Hz 115200: UBR=9, BRS=1, BRF=0 */
   brw : 9, // 115200
   mctl : UCBRF_0 + UCBRS_1
+#endif
 #else
 #warning Unrecognized value for TOS_DEFAULT_BAUDRATE, using 115200
   brw : 9, // 115200
@@ -84,7 +90,7 @@ msp430_usci_config_t msp430_usci_uart_default_config = {
 
 msp430_usci_config_t msp430_usci_spi_default_config = {
   /* Inactive high MSB-first 8-bit 3-pin master driven by SMCLK */
-  ctlw0 : ((UCCKPL + UCMSB + UCMST + UCSYNC) << 8) | UCSSEL__SMCLK,
+  ctlw0 : ((UCCKPH + UCMSB + UCMST + UCSYNC) << 8) | UCSSEL__SMCLK,
   /* 2x Prescale */
   brw : 2,
   mctl : 0                      /* Always 0 in SPI mode */
