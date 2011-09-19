@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011 João Gonçalves
  * Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
@@ -40,8 +41,12 @@
  * pull-down enabled.
  *
  * @author David Moss
+ * @author João Gonçalves
  */
-
+/*
+ * MoteIST has pull-down enabled leds
+ * Initialize them off
+ */
 module PlatformLedsP {
   provides {
     interface Init;
@@ -63,9 +68,9 @@ implementation {
       call Led0.makeOutput();
       call Led1.makeOutput();
       call Led2.makeOutput();
-      call Led0.clr();
-      call Led1.clr();
-      call Led2.clr();
+      call Led0.set();
+      call Led1.set();
+      call Led2.set();
     }
     return SUCCESS;
   }
@@ -136,13 +141,11 @@ implementation {
       } else {
 	call Leds.led1Off();
       }
-#ifdef notdef
       if (val & LEDS_LED2) {
 	call Leds.led2On();
       } else {
 	call Leds.led2Off();
       }
-#endif
     }
   }
 }

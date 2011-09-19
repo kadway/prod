@@ -62,4 +62,7 @@ implementation {
   PlatformP.PlatformClock -> PlatformClockC;
   
   components PlatformAdcC;
+  
+  components Msp430XV2ClockC;
+  PlatformP.InhibitUcs7 -> Msp430XV2ClockC;
 }

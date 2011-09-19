@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011 João Gonçalves
  * Copyright (c) 2010 People Power Co.
  * All rights reserved.
  *
@@ -54,6 +55,7 @@
  * is incurred.
  *
  * @author Peter A. Bigot <pab@peoplepowerco.com>
+ * @author João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
 
 module PlatformClockP {
@@ -105,25 +107,14 @@ module PlatformClockP {
      * Consequently, we have to wait for stabilization even if we
      * "know" a crystal is present.  */
 
-   {
+   
      //From TI example code msp430x54x_UCS_2.c
-     do {
+    do {
        // Clear XT2,XT1,DCO fault flags
        UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
        SFRIFG1 &= ~OFIFG;		// Clear fault flags
-     } while (SFRIFG1&OFIFG);		// Test oscillator fault flag
-   }
-
-   //previous from cc430 port
-#ifdef notdef
-      uint16_t ctr = 0;
-      do {
-        UCSCTL7 &= ~(XT1LFOFFG + DCOFFG);
-        SFRIFG1 &= ~OFIFG;
-      }while (++ctr && (SFRIFG1 & OFIFG));
-    }
-#endif
-
+    } while (SFRIFG1&OFIFG);		// Test oscillator fault flag
+   
     /* If the XT1 signal is still not valid, disable it; otherwise,
      * lower the power it uses.  (XT1DRIVE setting suggested by TI
      * example code.)
@@ -137,10 +128,35 @@ module PlatformClockP {
        * Current measurement does not indicate any value in doing so,
        * at least not in LPM4, but it doesn't seem to hurt either.
        */
-      UCSCTL6 &= ~(XT1DRIVE_3);                 // Xtal is now stable, reduce drive
+      UCSCTL6 &= ~(XT1DRIVE_3);   // Xtal is now stable, reduce drive
     }
 
 #endif /* PLATFORM_MSP430_HAS_XT1 */
+
+#if defined(PLATFORM_MSP430_HAS_XT2) && (0 == PLATFORM_MSP430_HAS_XT2)
+    /* Specifically told that there is no crystal.  Do nothing. */
+#else /* PLATFORM_MSP430_HAS_XT2 */
+
+    //set P5SEL.2 (in) and P5SEL.3(out) to cristal mode (XT2IN and XT2OUT bits = 1)
+    P5SEL |= (BIT2 | BIT3);
+    // XT2 on, sourced internally
+    UCSCTL6 &= ~(XT2BYPASS | XT2OFF);
+    //From TI example code msp430x54x_UCS_2.c
+    do {
+       // Clear XT2,XT1,DCO fault flags
+      UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+      SFRIFG1 &= ~OFIFG;		// Clear fault flags
+    } while (SFRIFG1&OFIFG);		// Test oscillator fault flag
+
+  if (UCSCTL7 & XT2OFFG) {
+      //P7DIR |= (BIT0 | BIT1);
+      P7SEL &= ~(BIT0| BIT1);
+      UCSCTL6 |= XT2OFF;
+    } else {
+       UCSCTL6 &= ~(XT2DRIVE_3);   // Xtal is now stable, reduce drive
+    }
+
+#endif /* PLATFORM_MSP430_HAS_XT2 */
 
     return call SubInit.init();
   }
