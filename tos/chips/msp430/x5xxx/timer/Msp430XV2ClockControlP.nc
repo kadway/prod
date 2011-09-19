@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011 João Gonçalves
  * Copyright (c) 2009-2010 People Power Co.
  * All rights reserved.
  *
@@ -40,6 +41,7 @@
  * T1A is used for 1MiHz.
  *
  * @author Peter A. Bigot <pab@peoplepowerco.com>
+ * @author João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
 
 #include "hardware.h"
@@ -168,14 +170,27 @@ module Msp430XV2ClockControlP @safe() {
         SFRIFG1 &= ~OFIFG;                      // Clear fault flags
       } while (UCSCTL7 & DCOFFG); // Test DCO fault flag
 
-      /* Use REFOCLK for ACLK, and DCOCLKDIV for SMCLK and DCOCLK SMCLK */
-      UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLK;
 
+      #if defined(PLATFORM_MSP430_HAS_XT2) && (1 == PLATFORM_MSP430_HAS_XT2)
+      UCSCTL4 = SELA__REFOCLK | SELS__XT2CLK | SELM__DCOCLKDIV;
+       /*
+        * MoteISTx5 has 4MHz XTAL
+        * Divide 4MHz XTAL by 4 to get 1 MHz
+        */
+      divs = DIVS_2; //1MHz
+      #else
+      /* Use REFOCLK for ACLK, and DCOCLKDIV for MCLK and SMCLK*/
+      UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;
+      #endif
+      
       /* DIVPA routes ACLK to external pin, undivided
        * DIVA uses ACLK at 2^15 Hz, undivided
-       * DIVS (SMCLK) uses DCOCLKDIV / N to produce 2^20Hz
+       * Default divs uses SMCLK at 2^20 Hz
+       * If there is XT2 of 32 MHz, divs = 5, divide by 32 to get 2^20 Hz
        * DIVM (MCLK) uses DCOCLKDIV to produce DCO/2, undivided
        */
+      
+      
       UCSCTL5 = DIVPA__1 | DIVA__1 | divs | DIVM__1;
     }
   }
