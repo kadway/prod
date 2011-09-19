@@ -34,7 +34,7 @@
 
 /*
  * Simple test application to test ADC
- * Single ADC channel doing repeated conversions
+ * 2 Channels convertion
  * @author: João Gonçalves <joao.m.goncalves@ist.utl.pt>
  */
 
@@ -54,27 +54,29 @@ module FastADCC{
   }
   uses interface Boot;
   uses interface Leds; 
-  uses interface Msp430Adc12Overflow as overflow;
-  uses interface Msp430Adc12SingleChannel as adc;
+  uses interface Msp430Adc12MultiChannel as adc;
   uses interface Resource;
-
 }
 
 implementation{
       
-  uint16_t adb[SAMPLES];
-  uint8_t count = 0;
-   
-  msp430adc12_channel_config_t adcconfig = {
+  uint16_t adb[SAMPLES];  
 
+  msp430adc12_channel_config_t adcconfig = {
     inch: INPUT_CHANNEL_A1,
     sref: REFERENCE_VREFplus_AVss,
     ref2_5v: REFVOLT_LEVEL_2_5,
     adc12ssel: SHT_SOURCE_ACLK,
     adc12div: SHT_CLOCK_DIV_1,
     sht: SAMPLE_HOLD_4_CYCLES,
-    sampcon_ssel: SAMPCON_SOURCE_ACLK,
+    sampcon_ssel: SAMPCON_SOURCE_SMCLK,
     sampcon_id: SAMPCON_CLOCK_DIV_1
+  };
+ 
+  adc12memctl_t channelconfig = {
+    inch: INPUT_CHANNEL_A2,
+    sref: REFVOLT_LEVEL_2_5, 
+    eos: 1
   };
  
   async command const msp430adc12_channel_config_t* AdcConfigure.getConfiguration(){
@@ -85,78 +87,49 @@ implementation{
   void printadb();
   void printfFloat(float toBePrinted);
   void showerror();
-  error_t configureMultipleRepeat();
+  error_t configure();
     
   event void Boot.booted(){
+    P1DIR |= 0x40;                       // P1.6 to output direction
+    P2DIR |= 0x01;                       // P2.0 to output direction
+    P1SEL |= 0x40;                       // P1.6 Output SMCLK
+    P2SEL |= 0x01;                       // 2.0 Output MCLK
+    printf("Booting...\n"); 
     call Resource.request();
   }
   
   event void Resource.granted(){
     error_t e = FAIL;
       while(e != SUCCESS){
-        e = configureMultipleRepeat();
+        e = configure();
       }
-      printf("Starting the ADC...\n");
 	  if(call adc.getData() != SUCCESS)
 	    printf("Conversion didn't start!\n");
   } 
   
-  
-  async event void overflow.conversionTimeOverflow(){ }
-
-  async event void overflow.memOverflow(){ }
  
-  async event uint16_t *adc.multipleDataReady(uint16_t *buffer, uint16_t numSamples){
+  async event void adc.dataReady(uint16_t *buffer, uint16_t numSamples){
+  /** 
+   * Conversion results are ready. Results are stored in the buffer in the
+   * order the channels where specified in the <code>configure()</code>
+   * command, i.e. every (numMemctl+1)-th entry maps to the same channel. 
+   * 
+   * @param buffer Conversion results (lower 12 bit are valid, respectively).
+   * @param numSamples Number of results stored in <code>buffer</code> 
+   */   
     printadb();
-    if(count==9)
-      return NULL;
-     count++;
-    return buffer;
   }
   
-  async event error_t adc.singleDataReady(uint16_t data){  
-    return FAIL;
-  }
-//functions
+  //functions
   
   void printadb(){
     uint16_t i;
-    float sum = 0;
-    uint16_t a;
-    float gain = 37.461;
-    float mil = 1000;
-    float dois_meio = 2.5;
-    float quat = 4095;
     float voltage = 0;
-    float current = 0;
-    float vsense = 0;
-      printf("\nPrinting ADC set of samples Nº%d.\n", count);
-      for(i = 0; i < SAMPLES; i++){
-       sum += (float) adb[i];
-       printf("Sample %d =", i);
-       printfFloat((float) adb[i]);
-       printf("\n");
-    }
-      sum = sum/SAMPLES;
-      
-      printf("Sample mean =");
-      printfFloat(sum);
-      printf("\n");
-      
-      printf("Vout mean (into ADC) =");
-      voltage = sum*dois_meio/quat;
+    for(i = 0; i < SAMPLES; i++){
+      printf("adb[%d] = %d ->", i, adb[i]);
+      voltage = adb[i]*2.5/4095;
       printfFloat(voltage);
-      printf(" V\n");
-      
-      vsense = (voltage/gain)*mil; //value in mV (Gm.Rout=37.461)
-      printf("Vsense =");
-      printfFloat(vsense);
-      printf(" mV\n");
-      
-      current = vsense/1.01; //current in mA, Rsense = 1.01 Ohm
-      printf("Current =");
-      printfFloat(current);
-      printf(" mA\n");    
+    }
   }
 
   void printfFloat(float toBePrinted) {
@@ -177,17 +150,16 @@ implementation{
 		f0 = f*10;   f0 %= 10;
 		f1 = f*100;  f1 %= 10;
 		f2 = f*1000; f2 %= 10;
-		printf("%c%ld.%d%d%d", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
+		printf("%c%ld.%d%d%d V\n", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
   } 
   
   void showerror(){
     call Leds.led0On();
   }
   
-  error_t configureMultipleRepeat(){
+  error_t configure(){
     error_t e;
-    printf("Configure multipleRepeat\n");
-    e = call adc.configureMultipleRepeat(&adcconfig, adb, SAMPLES, 0); 
+      e = call adc.configure(&adcconfig, &channelconfig, 1, adb, SAMPLES, 0);
     if(e != SUCCESS){
 		showerror();
         printf("error %d\n", e);

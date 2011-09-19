@@ -55,7 +55,7 @@ implementation {
 		  call Timer0.stop();
 		  t0=call Timer0.gett0();
 		  now=call Timer0.getNow();
-	      signal Tasks.FibonacciDone(num_iterations, now-t0, SUCCESS);
+      signal Tasks.FibonacciDone(num_iterations, now-t0, SUCCESS);
 	      }       
 	    }
   }
@@ -64,7 +64,6 @@ implementation {
 	  //deadline missed!
 	  uint32_t now,t0;
 	  deadline_miss = 1;
-	  call Timer0.stop();
       t0=call Timer0.gett0();
       now=call Timer0.getNow();
       signal Tasks.FibonacciDone(num_iterations, now-t0, FAIL);

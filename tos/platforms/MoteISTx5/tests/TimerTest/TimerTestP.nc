@@ -1,7 +1,7 @@
 
 #include <Timer.h>
 #include <stdio.h>
-#define DEADLINE 1
+#define DEADLINE 100
 
 module TimerTestP {
   uses interface Boot;
@@ -22,8 +22,11 @@ implementation {
     P6OUT &= 0xFB; //ADC output 0
     uwait(1000);
     P6OUT |= 0x04; //ADC output 1 //start pulse
-    
-    call Timer0.startOneShot(DEADLINE); 
+    uwait(1000);
+    P6OUT &= 0xFB; //ADC output 0
+    uwait(1000);
+    P6OUT |= 0x04; //ADC output 1 //start pulse
+    call Timer0.startPeriodic(DEADLINE); 
   }
   
   event void Timer0.fired() {
