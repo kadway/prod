@@ -130,7 +130,8 @@ implementation {
       call Pmm.SetVCore(0);
      }
   
-    else if(((8000000) < freq) && (freq<= (12000000))){ 
+    else if(((8000000) < freq) && (freq<= (12000000))){
+      //printf("increasing PMM to 1 for the freq of %lu\n", freq);
       call Pmm.SetVCore(1);
      }
 
@@ -157,20 +158,21 @@ command error_t Pmm.SetVCore (uint8_t level){
   level &= PMMCOREV_3;                       // Set Mask for Max. level
   actlevel = (PMMCTL0 & PMMCOREV_3);         // Get actual VCore
 
-  //printf("Actual VCore is %d. Changing to %d...\r\n", actlevel, level);
+ // printf("Actual VCore is %d. Changing to %d...\r\n", actlevel, level);
 
   while (((level != actlevel) && (status == 0)) || (level < actlevel))		// step by step increase or decrease
   {
     if (level > actlevel)
       status =  call Pmm.SetVCoreUp(++actlevel);
+     //printf("Vcore set up to %d, status is %d\n", actlevel, status);
     if (level < actlevel)
       status = call Pmm.SetVCoreDown(--actlevel);
     }
   
-  if (status == SUCCESS)
-    printf("PMM is now at mode %d.\n", level);
+  /*if (status == SUCCESS)
+    printf("%d, ", level);
   else
-    printf("Could not change VCore to %d. Actual VCore remains %d. \r\n", level, actlevel);
+    printf("Could not change VCore to %d. Actual VCore remains %d. \r\n", level, actlevel);*/
   return status;
 }
 
@@ -197,6 +199,8 @@ command error_t Pmm.SetVCoreUp (uint8_t level)
   SVSMHCTL &= ~_HAL_PMM_SVSFP ;
   // Check if a VCore increase is possible
   if ((PMMIFG & SVMHIFG) == SVMHIFG){			//-> Vcc is to low for a Vcore increase
+    printf("Vcc is to low for a Vcore increase\n");
+  
   	// recover the previous settings
   	PMMIFG &= ~SVSMHDLYIFG;
   	SVSMHCTL = SVSMHCTL_backup;
