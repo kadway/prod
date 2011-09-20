@@ -1,5 +1,5 @@
 #include <Timer.h>
-#include "../RadioNoAdc/Radio.h"
+#include "../RadioAdc/Radio.h"
 
 module MicaTaskP {
   uses interface Boot;
@@ -22,8 +22,8 @@ implementation {
   uint16_t metDeadlines = 0;
   uint16_t deadline = 100; //now using this one instead of the one in radio.h
   uint16_t iterations = 100; //now using this one instead of the one in radio.h
-  uint16_t numRequest = 0; //count the number of requests so far
-  
+  uint16_t numRequest = 0; //serves as a counter for rasing or lowering the iteration number
+  uint16_t requestNum = 0;//count the number of requests so far
   //prototypes
   error_t MicaSendMsg(uint8_t state);
   
@@ -102,6 +102,7 @@ implementation {
   }
   
   event void Timer1.fired(){ //make new request
+    requestNum++;
     MicaSendMsg(REQUEST);
     numRequest++;
     
@@ -139,6 +140,7 @@ implementation {
 				return FAIL;
       }
 			micaz_m->nodeid = MICA_NODE_ID;
+      micaz_m->request = requestNum;
 			micaz_m->task_i = iterations; // 0 for deadline miss
 			micaz_m->deadline = deadline;
 			micaz_m->missed = missedDeadlines;

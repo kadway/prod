@@ -14,6 +14,7 @@ implementation {
   uint32_t i = 0;
   uint32_t sum = 0;
   uint16_t num_iterations;
+  uint16_t totalIterations;
   uint32_t time_deadline;
   bool deadline_miss=FALSE;
 
@@ -37,11 +38,12 @@ implementation {
   command error_t Tasks.getFibonacci(uint16_t iterations, uint32_t deadline){
     deadline_miss = FALSE;
     num_iterations = iterations;
+    totalIterations = iterations;
     time_deadline = deadline;
     
       call Timer0.startOneShot(deadline);
 
-      printf("Posted fibonacci\nIterations:%d, deadline: %lu, deadline miss: %d\n",num_iterations, time_deadline, deadline_miss);
+      //printf("Posted fibonacci\nIterations:%d, deadline: %lu, deadline miss: %d\n",num_iterations, time_deadline, deadline_miss);
       post fibonacci();
   
     return SUCCESS;
@@ -57,8 +59,8 @@ implementation {
 		  call Timer0.stop();
 		  t0=call Timer0.gett0();
 		  now=call Timer0.getNow();
-      printf("fibonacci is done in: %lu\n", now-t0);
-      signal Tasks.FibonacciDone(num_iterations, now-t0, SUCCESS);
+      //printf("fibonacci is done in: %lu\n", now-t0);
+      signal Tasks.FibonacciDone(totalIterations, now-t0, SUCCESS);
 	      }       
 	    }
   }
@@ -70,7 +72,7 @@ implementation {
       t0=call Timer0.gett0();
       now=call Timer0.getNow();
       
-      printf("timer fired in fibonacci: %lu\n", now-t0);
+     // printf("timer fired in fibonacci: %lu\n", now-t0);
       signal Tasks.FibonacciDone(num_iterations, now-t0, FAIL);
   }
   
