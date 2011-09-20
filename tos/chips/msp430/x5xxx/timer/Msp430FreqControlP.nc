@@ -57,7 +57,7 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
     return FLLD_val[flld];
    }
   
-  command uint8_t FreqControl.getFLLN(void){
+  command uint16_t FreqControl.getFLLN(void){
     atomic return (UCSCTL2 & FLLN_BITS);
   }
 
@@ -90,7 +90,7 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
       }
       case SELM__XT2CLK:       
       default:{
-        printf("Something went very wrong. Can't Find MCLK source.\r\n");
+        printf("err: Can't Find MCLK source.\r\n");
         return 0;
       } 
     }
@@ -107,24 +107,25 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
      */
     source = call FreqControl.getMCLKSource();
     freq = call FreqControl.getMCLKFreq(source);
-   
+    
     if(freq == value){
-       printf("#error: MCLK frequency is already: %d Hz.\r\n", (uint8_t)(freq/1000000));
+       //printf("#error: MCLK frequency is already: %d Hz.\r\n", (uint8_t)(freq/1000000));
        return FAIL;
     }
     
     if(value > freq)
-       call Pmm.setMinRequiredVCore(value);
-   
+       if(call Pmm.setMinRequiredVCore(value)!=SUCCESS)
+          return FAIL;
+      
     switch (source) {
       case SELM__XT1CLK:
-        printf("MCLK is sourced by XT1.\r\n");
+        printf("err: MCLK is sourced by XT1.\r\n");
         break;    
       case SELM__VLOCLK:
-        printf("MCLK is sourced by VLOCLK.\r\n");
+        printf("err: MCLK is sourced by VLOCLK.\r\n");
         break;    
       case SELM__REFOCLK:
-        printf("MCLK is sourced by REFOCLK.\r\n");
+        printf("err: MCLK is sourced by REFOCLK.\r\n");
         break;    
       case SELM__DCOCLK:
         //printf("MCLK is sourced by DCOCLK.\r\n");
@@ -135,21 +136,24 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
         result = call FreqControl.setDCOFreq(value, TRUE);
         break;
       case SELM__XT2CLK:
-        printf("MCLK is sourced by XT2CLK.\r\n");
+        printf("err:MCLK is sourced by XT2CLK.\r\n");
         break;    
       default:
-       printf("Something went very wrong. Can't Find MCLK source.\r\n");
+       printf("err: Can't Find MCLK source.\r\n");
        return FAIL;
      }
 
     if(value < freq){
-      call Pmm.setMinRequiredVCore(value);
+      //if(call Pmm.setMinRequiredVCore(value)!=SUCCESS)
+      //{ /* Do nothing, wont break anything besides waisting more energy */}
+          
     }
    return result;
   }
 
   command uint32_t FreqControl.getDCOFreq(bool isdcoclkdiv){
-     uint8_t flln, fllrefdiv, flld; 
+     uint8_t fllrefdiv, flld; 
+     uint16_t flln;
      uint32_t freq,  fllref;
        flln = call FreqControl.getFLLN();
        flld = call FreqControl.getFLLD();
@@ -175,13 +179,13 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
     }
 
     if(isdcoclkdiv){
-      freq = flld*(flln+1)*fllref/fllrefdiv;
+      freq = (flln+1)*fllref/fllrefdiv;
      // printf("Actual DCO configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %lu Hz\nFLLREFDIV = %d.\r\n", flln, flld, fllref, fllrefdiv);
      // printf("\nActual DCOCLKDIV frequency is: %lu Hz.\r\n", freq);
       return (freq); 
     }
     
-    freq = (flln+1)*fllref/fllrefdiv;
+    freq = flld*(flln+1)*fllref/fllrefdiv;
     //printf("Actual DCO Configuration:\nFLLN = %d\nFLLD = %d\nFLLREF frequency = %lu Hz\nFLLREFDIV = %d.\r\n",flln, flld, fllref, fllrefdiv);
     //printf("\nActual DCOCLK frequency is: %lu Hz.\r\n", freq);
     return (freq); 
@@ -238,7 +242,7 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
           atomic{           
             __bis_SR_register(SR_SCG0);  // Disable FLL control
             if(call FreqControl.setDCORange(value) != SUCCESS){
-             printf("Could not set new DCO range. \r\n");
+             printf("err: Could not set new DCO range. \r\n");
              return FAIL;
             }
             //printf("\n\nSetting DCO Frequency to %d MHz.\nThe reference frequency is %lu Hz.\nFLLD is %d.\nFLLREFDIV is %d.\n\n", (uint16_t)(value/1000000), fllref, flld, fllrefdiv);
@@ -254,7 +258,7 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
             // incorporates XT1 and XT2 fault detection.
             do {
               if(count == 5)
-                printf("Wait for DCO to settle...\r\n");
+                printf("err: Wait for DCO to settle...\r\n");
               else if(count == 10)
 					count = 0;
               count++;
@@ -267,7 +271,7 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
          
           return SUCCESS;
         default:
-          printf("There is a problem in finding FLL source. \r\n");
+          printf("err: cant find FLL source. \r\n");
           return FAIL;
     }
     return SUCCESS;

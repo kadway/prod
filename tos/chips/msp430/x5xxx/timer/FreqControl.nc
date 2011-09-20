@@ -34,7 +34,7 @@ interface FreqControl{
 
  command uint8_t getFLLD(void);
 
- command uint8_t getFLLN(void);
+ command uint16_t getFLLN(void);
 
  command uint8_t getFLLREFDIV(void);
 
