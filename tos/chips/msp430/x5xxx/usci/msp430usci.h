@@ -52,7 +52,7 @@ msp430_usci_config_t msp430_usci_uart_default_config = {
   mctl : UCBRF_0 + UCBRS_3
 #endif
 #elif 9600 == TOS_DEFAULT_BAUDRATE
-#ifdef UART_SMCLK_XTAL_4MHz
+#if defined (UART_SMCLK_XTAL_4MHz) || defined(UART_SMCLK_XTAL_16MHz)
   brw : 104, // 9600
   mctl : UCBRF_0 + UCBRS_1
 #else
@@ -73,7 +73,7 @@ msp430_usci_config_t msp430_usci_uart_default_config = {
   brw : 18, // 57600
   mctl : UCBRF_0 + UCBRS_1
 #elif 115200 == TOS_DEFAULT_BAUDRATE
-#ifdef UART_SMCLK_XTAL_4MHz
+#if defined (UART_SMCLK_XTAL_4MHz) || defined(UART_SMCLK_XTAL_16MHz)
   brw : 8, // 115200
   mctl : UCBRF_0 + UCBRS_6
 #else

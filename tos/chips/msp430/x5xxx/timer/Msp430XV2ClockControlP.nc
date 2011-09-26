@@ -174,10 +174,10 @@ module Msp430XV2ClockControlP @safe() {
       #if defined(PLATFORM_MSP430_HAS_XT2) && (1 == PLATFORM_MSP430_HAS_XT2)
       UCSCTL4 = SELA__REFOCLK | SELS__XT2CLK | SELM__DCOCLKDIV;
        /*
-        * MoteISTx5 has 4MHz XTAL
+        * MoteISTx5 has 16MHz XTAL
         * Divide 4MHz XTAL by 4 to get 1 MHz
         */
-      divs = DIVS_2; //1MHz
+      divs = DIVS_4; //1MHz
       #else
       /* Use REFOCLK for ACLK, and DCOCLKDIV for MCLK and SMCLK*/
       UCSCTL4 = SELA__REFOCLK | SELS__DCOCLKDIV | SELM__DCOCLKDIV;

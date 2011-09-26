@@ -55,8 +55,8 @@ enum {
  * for other baudrates edit msp430usci.h
  */
 
-#define UART_SMCLK_XTAL_4MHz 
-
+//#define UART_SMCLK_XTAL_4MHz 
+#define UART_SMCLK_XTAL_16MHz
 //#define UART_SOURCE_REFOCLK
 /* Use the 32kHz crystal or REFOCLK */
 
