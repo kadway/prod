@@ -144,8 +144,8 @@ const float dco31_min [] = {0.7, 1.47, 3.17, 6.07, 12.3, 23.7, 39.0, 60.0};
      }
 
     if(value < freq){
-      //if(call Pmm.setMinRequiredVCore(value)!=SUCCESS)
-      //{ /* Do nothing, wont break anything besides waisting more energy */}
+      if(call Pmm.setMinRequiredVCore(value)!=SUCCESS)
+      { /* Do nothing, wont break anything besides waisting more energy */}
           
     }
    return result;
