@@ -20,5 +20,5 @@ interface Tasks{
     * status: FAIL if it missed the deadline
     *         SUCCESS if it has finished before deadline
     */
-	event void FibonacciDone(uint16_t iterations, uint32_t elapsedTime, error_t status); 
+	event void FibonacciDone(uint16_t iterations, uint32_t startTime, uint32_t endTime, error_t status); 
 }

@@ -17,20 +17,21 @@ module DVSnoRadioP {
   uses interface Tasks;
   uses interface FreqControl;
   uses interface Msp430Adc12Overflow as overflow;
-  uses interface Msp430Adc12MultiChannel as adc;
+  uses interface Msp430Adc12SingleChannel as adc;
   uses interface Resource as AdcResource;
 }
 implementation {
 
   uint16_t adb[SAMPLES];
   //uint8_t count = 0;
-  uint32_t Freq = 25000000;
+  uint32_t Freq = 1000000;
   uint32_t ActFreq = 0;
-  uint32_t EndFreq = 1000000; 
+  uint32_t EndFreq = 25000000; 
   uint32_t Step = 500000;
   uint32_t Time = 0;
   uint16_t Number = 0;
   bool AdcDone = FALSE;
+  bool flag = 1;
     
 //prototypes
   void printadb();
@@ -51,17 +52,19 @@ implementation {
     sampcon_id: SAMPCON_CLOCK_DIV_1
   };
   
-  adc12memctl_t channelconfig = {
-    inch: INPUT_CHANNEL_A2,
-    sref: REFVOLT_LEVEL_2_5, 
-    eos: 1
-  };
-  
   async command const msp430adc12_channel_config_t* AdcConfigure.getConfiguration(){
     return &adcconfig; // must not be changed
   }
   
   event void Boot.booted() {      
+    //printf("Booted\n");
+    call Leds.led0Off();
+    call Leds.led1Off();
+    call Leds.led2Off();
+    P1DIR |= 0x40;                       // P1.6 to output direction
+    P2DIR |= 0x01;                       // P2.0 to output direction
+    P1SEL |= 0x40;                       // P1.6 Output SMCLK
+    P2SEL |= 0x01;                       // 2.0 Output MCLK
     //request the adc
     call AdcResource.request();
  
@@ -79,13 +82,14 @@ implementation {
         /*
          * Adc is configured, now init the system
          */ 
-      printf("Number#,Frequency(Hz),Time(ms),I(12bit), V(12bit)\n");
+      printf("Number#,Frequency(Hz),Time(ms),Vin(V),I(mA)\n");
       if(call FreqControl.setMCLKFreq(Freq) != SUCCESS)
 				printf("Could not change the frequency to: %lu Hz. \r\n", Freq);
 			else
 				atomic ActFreq = Freq;
       
       call adc.getData();
+        //printf("Conversion didn't start!\n");
 
       uwait(1024*5);
       atomic if(AdcDone){
@@ -96,35 +100,28 @@ implementation {
   } 
   
   event void Tasks.FibonacciDone(uint16_t iterations, uint32_t elapsedTime, error_t status){
+    printf("Task done in %lu ms\n",elapsedTime);
     atomic Time = elapsedTime;
-    
-    if(Freq>EndFreq){
-      Freq=Freq-Step;
+    if(flag){
+      flag=0;
+      Freq=EndFreq;
       if(call FreqControl.setMCLKFreq(Freq) != SUCCESS)
 				printf("Could not change the frequency to: %lu Hz. \r\n", Freq);
 			else{
+				//printf("MCLK frequency is now %lu Hz. \r\n\n", Freq);
         atomic ActFreq = Freq;
         atomic Number++; // increment the number of sequences calculated
       }
       call adc.getData();
       
-      call Tasks.getFibonacci(ITERATIONS, DEADLINE);
+      call Tasks.getFibonacci(ITERATIONS+100, DEADLINE);
       atomic if(AdcDone){
         printadb();
         AdcDone = FALSE;
       }
     }
-    else{
-      atomic Number++; // increment the number of sequences calculated
-      call adc.getData();
-      uwait(1024*5);
-      atomic if(AdcDone){
-        printadb();
-        AdcDone = FALSE;
-      }
-    }
-    
-    if(Freq>=EndFreq){
+  
+    if(Freq==EndFreq){
       call Leds.led2On();
       return;
     }
@@ -137,42 +134,80 @@ implementation {
 
   async event void overflow.memOverflow(){ }
  
-   async event void adc.dataReady(uint16_t *buffer, uint16_t numSamples){
+  async event uint16_t *adc.multipleDataReady(uint16_t *buffer, uint16_t numSamples){
     AdcDone = TRUE;
-    
+    return buffer;
   }
   
+  async event error_t adc.singleDataReady(uint16_t data){  
+    return FAIL;
+  }
   
 //functions
  void printadb(){
     uint8_t i;
-    uint32_t currentMean = 0;
-    uint32_t voltageMean = 0;
-    //float Gain = 37.5; //(Gm*Rout)
-    //float refVolt = 2.5;
-    //float Nmax = 4095;
-    //float Rsense = 1.01;
+    float mean = 0;
+    float Gain = 37.5; //(Gm*Rout)
+    float refVolt = 2.5;
+    float Nmax = 4095;
+    float Vout = 0;
+    float Current = 0;
+    //float Vsense = 0;
+    float Rsense = 1.01;
     
-    for(i = 0; i < SAMPLES; i+=2){
-      currentMean += adb[i];
-      voltageMean += adb[i+1];
+    for(i = 0; i < SAMPLES; i++){
+      mean += (float) adb[i];
+      //printf("Sample %d =", i);
+      //printfFloat((float) adb[i]);
+      //printf("\n");
+      //printf("Vout =");
+      //Vout = adb[i]*refVolt/Nmax;
+      //Vout = ((float)((uint8_t)(Vout*100)))/100;
+      //printfFloat(Vout);
+      //printf(" V\n");
     }
-      currentMean /= SAMPLES/2;  //bits
-      voltageMean /= SAMPLES/2; // bits
-      //currentMean *= refVolt/Nmax; //value in Volts
-      //voltageMean *= refVolt/Nmax; //value in Volts
+      mean = mean/SAMPLES;
+      //printf("Sample mean =");
+      //printfFloat(mean);
+      //printf("\n");
       
-      //currentMean = (currentMean*1000)/(Gain*Rsense); //current in mA, Rsense = 1.01 Ohm
-      //voltageMean *= 2; // multiply by 2 to get total battery voltage
+      //printf("Vout mean (into ADC) =");
+      Vout = mean*refVolt/Nmax;
+      //Vout = ((float)((uint8_t)(Vout*100)))/100;
+      //printfFloat(Vout);
+      //printf(" V\n");
       
-      printf("%d,%lu,%lu,%lu,%lu\n", Number, ActFreq, Time, currentMean, voltageMean);
+      //Vsense = (Vout*1000)/Gain; //multiply by 1000 to get value in mV
+     // printf("Vsense =");
+     // printfFloat(Vsense);
+     // printf(" mV\n");
+      
+      //Current = Vsense/Rsense; //current in mA, Rsense = 1.01 Ohm
+      //printf("Current =");
+      //printfFloat(Current);
+      //printf(" mA\n");
+      
+      Current = (Vout*1000)/(Gain*Rsense); //current in mA, Rsense = 1.01 Ohm
+      printf("%d,%lu,%lu,", Number, ActFreq, Time);
+      printfFloat(Vout);
+      printf(",");
+      printfFloat(Current);
+      //printf(" mA\n");
+      //printf("\n");
+      printf("\n");
   }
 
 
   void printfFloat(float toBePrinted) {
 	uint32_t fi, f0, f1, f2;
+	char c;
 	float f = toBePrinted;
 
+  	  if (f<0){
+		c = '-'; f = -f;
+		} else {
+			c = ' ';
+		}
 		// integer portion.
 		fi = (uint32_t) f;
 
@@ -181,7 +216,7 @@ implementation {
 		f0 = f*10;   f0 %= 10;
 		f1 = f*100;  f1 %= 10;
 		f2 = f*1000; f2 %= 10;
-		printf("%ld.%d%d%d", fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
+		printf("%c%ld.%d%d%d", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
   } 
   
   void showerror(){
@@ -190,7 +225,8 @@ implementation {
   
   error_t configureAdc(){
     error_t e;
-      e = call adc.configure(&adcconfig, &channelconfig, 1, adb, SAMPLES, 0);
+    //e = call adc.configureMultipleRepeat(&adcconfig, adb, SAMPLES, 0); 
+    e = call adc.configureMultiple(&adcconfig, adb, SAMPLES, 0);
     if(e != SUCCESS){
 		showerror();
         printf("error %d\n", e);

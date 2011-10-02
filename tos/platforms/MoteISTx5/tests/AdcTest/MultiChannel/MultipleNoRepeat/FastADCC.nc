@@ -46,7 +46,7 @@
 #undef ADC12_TIMERA_ENABLED
 #endif
 
-#define SAMPLES 16
+#define SAMPLES 15
 
 module FastADCC{
  provides {
@@ -68,17 +68,22 @@ implementation{
     ref2_5v: REFVOLT_LEVEL_2_5,
     adc12ssel: SHT_SOURCE_ACLK,
     adc12div: SHT_CLOCK_DIV_1,
-    sht: SAMPLE_HOLD_4_CYCLES,
+    sht: SAMPLE_HOLD_1024_CYCLES,
     sampcon_ssel: SAMPCON_SOURCE_SMCLK,
     sampcon_id: SAMPCON_CLOCK_DIV_1
   };
  
-  adc12memctl_t channelconfig = {
+  /*adc12memctl_t channelconfig = {
     inch: INPUT_CHANNEL_A2,
     sref: REFVOLT_LEVEL_2_5, 
     eos: 1
+  };*/
+   adc12memctl_t channelconfig [] = { 
+    {INPUT_CHANNEL_A2, REFVOLT_LEVEL_2_5, 0},
+    {INPUT_CHANNEL_A3, REFVOLT_LEVEL_2_5, 1}
   };
- 
+  adc12memctl_t * adcchannelconfig = (adc12memctl_t *) channelconfig;
+  
   async command const msp430adc12_channel_config_t* AdcConfigure.getConfiguration(){
     return &adcconfig; // must not be changed
   }
@@ -118,18 +123,62 @@ implementation{
    * @param numSamples Number of results stored in <code>buffer</code> 
    */   
     printadb();
+    if(call adc.getData() != SUCCESS)
+	    printf("Conversion didn't start!\n");
   }
-  
+  void uwait(uint16_t u) {
+    uint16_t t0 = TA0R;
+    while((TA0R - t0) <= u);
+  }
   //functions
   
   void printadb(){
-    uint16_t i;
-    float voltage = 0;
+    uint8_t i;
+    uint32_t VCurrentMean = 0;
+    uint32_t VCoreMean = 0;
+    uint32_t VbatMean = 0;
+    
+    float Gain = 37.5; //(Gm*Rout)
+    float refVolt = 2.5;
+    float Nmax = 4095;
+    float Rsense = 1.01;
+    float curr=0;
+    float bat =0;
+    float core=0;
+    
     for(i = 0; i < SAMPLES; i++){
       printf("adb[%d] = %d ->", i, adb[i]);
-      voltage = adb[i]*2.5/4095;
-      printfFloat(voltage);
+      core = (float)adb[i]*2.5/4095;
+      printfFloat(core);
     }
+    uwait(1024*6);
+    /*
+    for(i = 0; i < SAMPLES; i+=3){
+      VCurrentMean += adb[i];
+      VbatMean += adb[i+1];
+      VCoreMean += adb[i+2];
+    }
+      VCurrentMean /= (SAMPLES/3);  //bits
+      VCoreMean /= (SAMPLES/3); // bits
+      VbatMean /= (SAMPLES/3); // bits
+      curr = ((float)VCurrentMean)*2.5/Nmax);
+      curr /= (Gain*Rsense);
+      curr = curr *1000;//value in mA
+      
+      bat = (((float)VCoreMean)*2.5/Nmax)*2; //value in V
+      
+      core = ((float)VCoreMean)*1.5/Nmax; // in V
+      //currentMean = (currentMean*1000)/(Gain*Rsense); //current in mA, Rsense = 1.01 Ohm
+      //voltageMean *= 2; // multiply by 2 to get total battery voltage
+      printf("Current,Supply,Vcore\n");
+      printfFloat(curr);
+      printf(",");
+      printfFloat(bat);
+      printf(",");
+      printfFloat(core);
+      printf("\n");
+      //printf("%d,%lu,%lu,%lu,%lu,%lu\n", Number, ActFreq, Time, VCurrentMean, VbatMean, VCoreMean);
+      */
   }
 
   void printfFloat(float toBePrinted) {
@@ -150,7 +199,7 @@ implementation{
 		f0 = f*10;   f0 %= 10;
 		f1 = f*100;  f1 %= 10;
 		f2 = f*1000; f2 %= 10;
-		printf("%c%ld.%d%d%d V\n", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
+		printf("%c%ld.%d%d%d\n", c, fi, (uint8_t) f0, (uint8_t) f1,  (uint8_t) f2);
   } 
   
   void showerror(){
@@ -159,7 +208,7 @@ implementation{
   
   error_t configure(){
     error_t e;
-      e = call adc.configure(&adcconfig, &channelconfig, 1, adb, SAMPLES, 0);
+      e = call adc.configure(&adcconfig, adcchannelconfig, 2, adb, SAMPLES, 0);
     if(e != SUCCESS){
 		showerror();
         printf("error %d\n", e);

@@ -71,7 +71,7 @@ implementation{
     ref2_5v: REFVOLT_LEVEL_2_5,
     adc12ssel: SHT_SOURCE_ACLK,
     adc12div: SHT_CLOCK_DIV_1,
-    sht: SAMPLE_HOLD_4_CYCLES,
+    sht: SAMPLE_HOLD_8_CYCLES,
     sampcon_ssel: SAMPCON_SOURCE_SMCLK,
     sampcon_id: SAMPCON_CLOCK_DIV_1
   };
@@ -86,7 +86,16 @@ implementation{
   void showerror();
   error_t configureMultiple();
     
+  void uwait(uint16_t u) {
+    uint16_t t0 = TA0R;
+    while((TA0R - t0) <= u);
+  }
+  
   event void Boot.booted(){
+    P1DIR |= 0x40;                       // P1.6 to output direction
+    P2DIR |= 0x01;                       // P2.0 to output direction
+    P1SEL |= 0x40;                       // P1.6 Output SMCLK
+    P2SEL |= 0x01;                       // 2.0 Output MCLK
     printf("Booting...\n"); 
     call Resource.request();
   }
@@ -110,6 +119,7 @@ implementation{
   async event uint16_t *adc.multipleDataReady(uint16_t *buffer, uint16_t numSamples){
     printf("Samples ready\n");
     printadb();
+    uwait(4096);
     return buffer;
   }
   

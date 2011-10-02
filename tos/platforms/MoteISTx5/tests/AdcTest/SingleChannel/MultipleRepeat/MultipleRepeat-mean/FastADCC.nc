@@ -67,13 +67,13 @@ implementation{
    
   msp430adc12_channel_config_t adcconfig = {
 
-    inch: INPUT_CHANNEL_A1,
-    sref: REFERENCE_VREFplus_VREFnegterm,
-    //sref: REFERENCE_VREFplus_AVss,
+    inch: INPUT_CHANNEL_A2,
+    //sref: REFERENCE_VREFplus_VREFnegterm,
+    sref: REFERENCE_VREFplus_AVss,
     ref2_5v: REFVOLT_LEVEL_2_5,
-    adc12ssel: SHT_SOURCE_ADC12OSC,
+    adc12ssel: SHT_SOURCE_ACLK,
     adc12div: SHT_CLOCK_DIV_1,
-    sht: SAMPLE_HOLD_16_CYCLES,
+    sht: SAMPLE_HOLD_8_CYCLES,
     sampcon_ssel: SAMPCON_SOURCE_ACLK,
     sampcon_id: SAMPCON_CLOCK_DIV_1
   };
@@ -112,13 +112,13 @@ implementation{
   async event void overflow.memOverflow(){ }
  
   async event uint16_t *adc.multipleDataReady(uint16_t *buffer, uint16_t numSamples){
-    if(count<20){
+    //if(count<20){
       printadb();
-      count++;
-    }
-    else 
-      return NULL;
-      //uwait(1024*6);
+    //  count++;
+   // }
+   // else 
+    //  return NULL;
+    //  uwait(1024*6);
     call Leds.led2Toggle();
     return buffer;
   }
@@ -143,27 +143,28 @@ implementation{
     float Current = 0;
     float Vsense = 0;
     float Rsense = 1.01;
-    printf("Sample,Vin(V)\n");
+    //printf("Sample,Vin(V)\n");
     for(i = 0; i < SAMPLES; i++){
       mean += (float) adb[i];
-      printfFloat((float) adb[i]);
-      printf(",");
+      //printfFloat((float) adb[i]);
+      //printf(",");
       Vout = adb[i]*refVolt/Nmax;
       //Vout = ((float)((uint8_t)(Vout*100)))/100;
-      printfFloat(Vout);
-      printf("\n");
+      //printfFloat(Vout);
+      //printf("\n");
       }
       mean = mean/SAMPLES;
       //printf("Sample mean =");
       //printfFloat(mean);
       //printf("\n");
-      printf("Mean(V),Vsense(mV),Current(mA),Current(mA)\n");  
+     // printf("Mean(V),Vsense(mV),Current(mA),Current(mA)\n");  
       //printf("Vout corrected with \" ((float)((uint8_t)(Vout*100)))/100 \" = ");
       Vout = mean*refVolt/Nmax;
       //Vout = ((float)((uint8_t)(Vout*100)))/100;
+      //printf("Mean Voltage: ");
       printfFloat(Vout);
-      printf(",");
-      
+      printf("\n");
+      /*
       Vsense = (Vout*1000)/Gain; //multiply by 1000 to get value in mV
       //printf("Vsense =");
       printfFloat(Vsense);
@@ -179,7 +180,7 @@ implementation{
       printfFloat(Current);
       //printf(" mA\n");
       //printf("\n");
-      printf("\n");
+      printf("\n");*/
   }
 
   void printfFloat(float toBePrinted) {

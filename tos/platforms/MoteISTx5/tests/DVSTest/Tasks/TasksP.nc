@@ -60,7 +60,7 @@ implementation {
 		  t0=call Timer0.gett0();
 		  now=call Timer0.getNow();
       //printf("fibonacci is done in: %lu\n", now-t0);
-      signal Tasks.FibonacciDone(totalIterations, now-t0, SUCCESS);
+      signal Tasks.FibonacciDone(totalIterations, t0, now, SUCCESS);
 	      }       
 	    }
   }
@@ -73,9 +73,9 @@ implementation {
       now=call Timer0.getNow();
       
      // printf("timer fired in fibonacci: %lu\n", now-t0);
-      signal Tasks.FibonacciDone(num_iterations, now-t0, FAIL);
+      signal Tasks.FibonacciDone(num_iterations, now, t0, FAIL);
   }
   
-  event void TaskDone.FibonacciDone(uint16_t iterations, uint32_t elapsedTime, error_t status){ }
+  event void TaskDone.FibonacciDone(uint16_t iterations, uint32_t startTime, uint32_t endTime, error_t status){ }
   
 }
