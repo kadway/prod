@@ -16,5 +16,4 @@ implementation
 
   components PlatformLedsC;
   PlatformP.PlatformLeds -> PlatformLedsC;
-  
 }

@@ -8,7 +8,9 @@
 
 for (split(/\n/, <<'EOText'
 
+  %P/hardware
   %P/hardware/leds
+  %P/hardware/timer
   %P/chips/cc2420
   
   %T/chips/cc2420
